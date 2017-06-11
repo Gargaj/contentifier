@@ -38,19 +38,30 @@ abstract class Contentifier
     header("Location: ".$url);
     exit();
   }
+  function initurls()
+  {
+    $this->url = ($_SERVER["HTTPS"]=="on"?"https":"http").":/"."/".$_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"];
+    
+    $dir = dirname($_SERVER["PHP_SELF"]);
+
+    $this->rootRelativeURL = $_SERVER['REQUEST_URI'];
+    if (strlen($dir) > 1)
+    {
+      $this->rootRelativeURL = substr($this->rootRelativeURL,strlen($dir));
+    }
+    list($this->rootRelativePath,) = explode("?",$this->rootRelativeURL);
+    $this->rootURL = substr($this->url,0,-strlen($this->rootRelativeURL))."/";
+  }
   function extractslug()
   {
     $this->slug = "";
-    if ($_GET["page"])
+    if ($this->rewriteenabled())
     {
-      $this->slug = $_GET["page"];
+      $this->slug = trim($this->rootRelativePath,'/');
     }
     else
     {
-      if (preg_match("/^\/([a-zA-Z0-9\-_]*)\/"."/",$this->rootRelativeURL,$m))
-      {
-        $this->slug = $m[1];
-      }
+      $this->slug = $_GET["page"];
     }
     if (!$this->slug)
     {
@@ -124,22 +135,20 @@ abstract class Contentifier
   {
     return $this->sql->selectRow($this->sql->escape("select * from pages where slug='%s'",$slug));
   }
+  public function install()
+  {
+    $init = array(
+      "CREATE TABLE `menu` ( `id` int(11) NOT NULL AUTO_INCREMENT, `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT;",
+      "CREATE TABLE `pages` ( `id` int(11) NOT NULL AUTO_INCREMENT, `slug` varchar(128) NOT NULL, `title` text NOT NULL, `content` text NOT NULL, `format` enum('text','html','wiki') NOT NULL DEFAULT 'text', PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT;",
+      "CREATE TABLE `users` ( `id` int(11) NOT NULL AUTO_INCREMENT, `username` varchar(64) NOT NULL, `password` varchar(128) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT;"
+    );
+    foreach($init as $v) $this->sql->Query($v);
+  }
   public function run()
   {
     $this->sql = new SQLLib();
     $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
-    
-    $this->url = ($_SERVER["HTTPS"]=="on"?"https":"http").":/"."/".$_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"];
-    
-    $dir = dirname($_SERVER["PHP_SELF"]);
-
-    $this->rootRelativeURL = $_SERVER['REQUEST_URI'];
-    if (strlen($dir) > 1)
-    {
-      $this->rootRelativeURL = substr($this->rootRelativeURL,strlen($dir));
-    }
-    $this->rootURL = substr($this->url,0,-strlen($this->rootRelativeURL))."/";
-    
+    $this->initurls();  
     $this->extractslug();
     $this->render();
   }
