@@ -203,7 +203,6 @@ class SQLLib {
       $keys[] = $tuple[$key];
     $sql .= " WHERE `".$key."` IN (".implode(",",$keys).")";
 
-    //echo $sql."\n\n";
     $this->Query($sql);
   }
 

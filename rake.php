@@ -1,4 +1,9 @@
 <?php
+function ctype_var($s)
+{
+  return ctype_alnum($s) || $s == "_";
+}
+
 function parse_php( $filename, $minify = true, $include = false )
 {
   $file = file($filename);
@@ -13,7 +18,7 @@ function parse_php( $filename, $minify = true, $include = false )
     {
       $v = rtrim($v);
     }
-    $v = preg_replace("/\/\/.*/","",$v);
+    $v = preg_replace_callback("/\/\/.*/",function($i){ return strstr($i[0],'"')===false ? "" : $i[0]; },$v);
     if ($v == "<?")
     {
       if ($include) $v = "";
@@ -50,6 +55,19 @@ function parse_php( $filename, $minify = true, $include = false )
     $out = preg_replace("/\n+/","\n",$out);
   }
   
+  if ($minify)
+  {
+    for($x=0;$x<strlen($out);$x++)
+    {
+      if ( $out{$x}==" " && !(ctype_var($out{$x-1}) && ctype_var($out{$x+1})) )
+      {
+        $out = substr($out,0,$x) . substr($out,$x+1);
+        $x--;
+      }
+    }
+    $out = preg_replace("/\"\.\"/","",$out);
+  }
+  
   return $out;
 }
 
@@ -58,10 +76,10 @@ chdir("contentifier");
 header("Content-type: text/plain; charset=utf-8");
 
 $out = parse_php( "contentifier.php", true );
-//echo $out;
+echo $out;
 file_put_contents("../contentifier.min.php",$out);
 
 $out = parse_php( "contentifier.php", false );
-echo $out;
+//echo $out;
 file_put_contents("../contentifier.php",$out);
 ?>

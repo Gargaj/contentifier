@@ -169,7 +169,6 @@ class SQLLib {
     foreach($tuples as $tuple)
       $keys[] = $tuple[$key];
     $sql .= " WHERE `".$key."` IN (".implode(",",$keys).")";
-    
     $this->Query($sql);
   }
   function UpdateOrInsertRow($table,$o,$where)
@@ -599,7 +598,7 @@ trait ContentifierAdmin
           break;
       }
     }
-    $output .= "</div><footer>Built with <a href='https:
+    $output .= "</div><footer>Built with <a href='https://github.com/Gargaj/contentifier'>Contentifier</a></footer></body></html>";
     echo $output;
   }
 };
