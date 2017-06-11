@@ -1,11 +1,18 @@
 <?php
-function parse_php( $filename, $include = false )
+function parse_php( $filename, $minify = true, $include = false )
 {
   $file = file($filename);
   $out = "";
   foreach($file as $v)
   {
-    $v = trim($v);
+    if ($minify)
+    {
+      $v = trim($v);
+    }
+    else
+    {
+      $v = rtrim($v);
+    }
     $v = preg_replace("/\/\/.*/","",$v);
     if ($v == "<?")
     {
@@ -21,20 +28,36 @@ function parse_php( $filename, $include = false )
       if (preg_match("/^['\"].*['\"]$/",trim($m[2])))
       {
         $includeFile = trim($m[2],"'\"");
-        $v = parse_php($includeFile, true);
+        $v = parse_php($includeFile, $minify, true);
       }
     }
-    $out .= $v." ";
+    if ($minify)
+    {
+      $out .= $v." ";
+    }
+    else
+    {
+      $out .= $v."\n";
+    }
   }
   $out = preg_replace("/\/\*.*?\*\//ims","",$out);
-  $out = preg_replace("/\s+/"," ",$out);
+  if ($minify)
+  {
+    $out = preg_replace("/\s+/"," ",$out);
+  }
   
   return $out;
 }
 
 chdir("contentifier");
-$out = parse_php( "contentifier.php" );
+
 header("Content-type: text/plain; charset=utf-8");
+
+$out = parse_php( "contentifier.php", true );
+//echo $out;
+file_put_contents("../contentifier.min.php",$out);
+
+$out = parse_php( "contentifier.php", false );
 echo $out;
 file_put_contents("../contentifier.php",$out);
 ?>
