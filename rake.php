@@ -57,8 +57,18 @@ function parse_php( $filename, $minify = true, $include = false )
   
   if ($minify)
   {
+    $inString = false;
     for($x=0;$x<strlen($out);$x++)
     {
+      if ($out{$x}=='"' && $out{$x-1}!="\\")
+      {
+        $inString = !$inString;
+        continue;
+      }
+      if ($inString)
+      {
+        continue;
+      }
       if ( $out{$x}==" " && !(ctype_var($out{$x-1}) && ctype_var($out{$x+1})) )
       {
         $out = substr($out,0,$x) . substr($out,$x+1);
