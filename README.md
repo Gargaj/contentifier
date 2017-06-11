@@ -10,6 +10,7 @@ Still heavily work in progress; no first user experience, etc., not documented w
 **Don't use it just yet.**
 
 ## How to use
+Get `contentifier.php` or `contentifier.min.php`. Place it next to an `index.php` that looks like this:
 ``` php
 <?php
 include_once("contentifier.php");
@@ -23,10 +24,23 @@ $contentifier = new MyContentifier();
 $contentifier->run();
 ?>
 ```
-That's it. There's more of course if you want to tweak, but in general you shouldn't bother.
+That's it.
 
+You can also sweeten the URLs by using a `.htaccess` like this:
+```
+<IfModule mod_rewrite.c>
+RewriteEngine on
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . index.php
+</IfModule>
+```
+...and adding this to your derived class:
+``` php
+  public function rewriteenabled() { return true; }
+```
 ## How to build
-Use *rake.php* to compile the contents of the *contentifier* folder into one file.
+Use `rake.php` to compile the contents of the `contentifier` folder into one file.
 
 ## Templating
-By default it includes *template.html* and replaces {%MENU%} and {%CONTENT%} with the respective data.
+By default it includes `template.html` and replaces `{%MENU%}` and `{%CONTENT%}` with the respective data.
