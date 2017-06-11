@@ -45,6 +45,10 @@ function parse_php( $filename, $minify = true, $include = false )
   {
     $out = preg_replace("/\s+/"," ",$out);
   }
+  else
+  {
+    $out = preg_replace("/\n+/","\n",$out);
+  }
   
   return $out;
 }

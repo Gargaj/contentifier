@@ -1,20 +1,16 @@
 <?php 
-
 global $SQLLIB_ARRAYS_CLEANED;
 $SQLLIB_ARRAYS_CLEANED = false;
-
 class SQLLib {
   public $link;
   public $debugMode = false;
   public $charset = "";
   public $queries = array();
-
   function Connect($SQL_HOST,$SQL_USERNAME,$SQL_PASSWORD,$SQL_DATABASE)
   {
     $this->link = mysqli_connect($SQL_HOST,$SQL_USERNAME,$SQL_PASSWORD,$SQL_DATABASE);
     if (mysqli_connect_errno($this->link))
       die("Unable to connect MySQL: ".mysqli_connect_error());
-
     $charsets = array("utf8mb4","utf8");
     $this->charset = "";
     foreach($charsets as $c)
@@ -30,12 +26,10 @@ class SQLLib {
       die("Error loading any of the character sets:");
     }
   }
-
   function Disconnect()
-	{
+  {
     mysqli_close($this->link);
   }
-
   function Query($cmd)
   {
     if ($this->debugMode)
@@ -52,15 +46,12 @@ class SQLLib {
       if(!$r) throw new Exception("<pre>\nMySQL ERROR:\nError: ".mysqli_error($this->link)."\nQuery: ".$cmd);
       $this->queries[] = "*";
     }
-
     return $r;
   }
-
   function Fetch($r)
   {
     return mysqli_fetch_object($r);
   }
-
   function SelectRows($cmd)
   {
     $r = $this->Query($cmd);
@@ -68,7 +59,6 @@ class SQLLib {
     while($o = $this->Fetch($r)) $a[]=$o;
     return $a;
   }
-
   function SelectRow($cmd)
   {
     if (stristr($cmd,"select ")!==false && stristr($cmd," limit ")===false) 
@@ -77,13 +67,11 @@ class SQLLib {
     $a = $this->Fetch($r);
     return $a;
   }
-
   function InsertRow($table,$o,$onDup = array())
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
       trigger_error("Arrays not cleaned before InsertRow!",E_USER_ERROR);
-
     if (is_object($o)) $a = get_object_vars($o);
     else if (is_array($o)) $a = $o;
     $keys = Array();
@@ -93,7 +81,6 @@ class SQLLib {
       if ($v!==NULL) $values[]="'".mysqli_real_escape_string($this->link,$v)."'";
       else           $values[]="null";
     }
-
     $cmd = sprintf("insert %s (%s) values (%s)",
       $table,implode(", ",$keys),implode(", ",$values));
     if ($onDup)
@@ -112,18 +99,14 @@ class SQLLib {
       }
       $cmd .= implode(", ",$set);
     }
-
     $r = $this->Query($cmd);
-
     return mysqli_insert_id($this->link);
   }
-
   function InsertMultiRow($table,$arr)
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
       trigger_error("Arrays not cleaned before InsertMultiRow!",E_USER_ERROR);
-
     $keys = Array();
     $allValues = Array();
     foreach($arr as $o)
@@ -139,18 +122,15 @@ class SQLLib {
       }
       $allValues[] = "(".implode(", ",$values).")";
     }
-
     $cmd = sprintf("insert %s (%s) values %s",
       $table,implode(", ",$keys),implode(", ",$allValues));
     $r = $this->Query($cmd);
   }
-
   function UpdateRow($table,$o,$where)
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
       trigger_error("Arrays not cleaned before UpdateRow!",E_USER_ERROR);
-
     if (is_object($o)) $a = get_object_vars($o);
     else if (is_array($o)) $a = $o;
     $set = Array();
@@ -168,7 +148,6 @@ class SQLLib {
       $table,implode(", ",$set),$where);
     $this->Query($cmd);
   }
-
   
   function UpdateRowMulti( $table, $key, $tuples )
   {
@@ -176,9 +155,7 @@ class SQLLib {
       return;
     if (!is_array($tuples[0]))
       throw new Exception("Has to be array!");
-
     $fields = array_keys( $tuples[0] );
-
     $sql = "UPDATE ".$table;
     $keys = array();
     $cond = "";
@@ -192,11 +169,9 @@ class SQLLib {
     foreach($tuples as $tuple)
       $keys[] = $tuple[$key];
     $sql .= " WHERE `".$key."` IN (".implode(",",$keys).")";
-
     
     $this->Query($sql);
   }
-
   function UpdateOrInsertRow($table,$o,$where)
   {
     if ($this->SelectRow(sprintf("SELECT * FROM %s WHERE %s",$table,$where)))
@@ -204,7 +179,6 @@ class SQLLib {
     else
       return $this->InsertRow($table,$o);
   }
-
   function StartTransaction()
   {
     mysqli_autocommit($this->link, FALSE);
@@ -226,11 +200,9 @@ class SQLLib {
     next($args);
     while (list($key, $value) = each($args))
       $args[$key] = mysqli_real_escape_string( $this->link, $args[$key] );
-
     return call_user_func_array("sprintf", $args);
   }
 }
-
 class SQLTrans
 {
   var $rollback;
@@ -248,7 +220,6 @@ class SQLTrans
       $this->CancelTransaction();
   }
 }
-
 class SQLSelect
 {
   var $fields;
@@ -259,9 +230,8 @@ class SQLSelect
   var $groups;
   var $limit;
   var $offset;
-
   function SQLSelect()
-	{
+  {
     $this->fields = array();
     $this->tables = array();
     $this->conditions = array();
@@ -306,10 +276,9 @@ class SQLSelect
       $this->offset = $offset;
   }
   function GetQuery()
-	{
+  {
     if (!count($this->tables))
       throw new Exception("[sqlselect] No tables specified!");
-
     $sql = "SELECT ";
     if ($this->fields) {
       $sql .= implode(", ",$this->fields);
@@ -339,7 +308,6 @@ class SQLSelect
     return $sql;
   }
 }
-
 function nop($s) { return $s; }
 function clearArray($a)
 {
@@ -352,14 +320,10 @@ function clearArray($a)
       $ar[$k] = $qcb($v);
   return $ar;
 }
-
 $_POST = clearArray($_POST);
 $_GET = clearArray($_GET);
 $_REQUEST = clearArray($_REQUEST);
 $SQLLIB_ARRAYS_CLEANED = true;
-
-
-
 trait ContentifierAdmin
 {
   function isloggedinasadmin()
@@ -639,9 +603,6 @@ trait ContentifierAdmin
     echo $output;
   }
 };
-
-
-
 abstract class Contentifier
 {
   
@@ -653,9 +614,7 @@ abstract class Contentifier
   abstract public function sqlpass();
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
-
   use ContentifierAdmin;
-
   function escape($s)
   {
     return htmlspecialchars($s,ENT_QUOTES);
@@ -681,9 +640,7 @@ abstract class Contentifier
   function initurls()
   {
     $this->url = ($_SERVER["HTTPS"]=="on"?"https":"http").":/"."/".$_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"];
-
     $dir = dirname($_SERVER["PHP_SELF"]);
-
     $this->rootRelativeURL = $_SERVER['REQUEST_URI'];
     if (strlen($dir) > 1)
     {
