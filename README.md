@@ -1,6 +1,8 @@
-# contentifier
+# Contentifier
 Single file website / content engine aimed to be a combination of the compactness
 of http://github.com/vrana/adminer and the featureset of Wordpress. Currently around 20 kilobytes.
+
+![admin screenshot](https://user-images.githubusercontent.com/1702533/27014035-87b2df36-4ef0-11e7-89fb-af5b6caf9bd5.png)
 
 ## Warning
 Still heavily work in progress; no first user experience, etc., not documented well.
