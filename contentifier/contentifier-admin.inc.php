@@ -52,6 +52,7 @@ trait ContentifierAdmin
     "input.delete{width:10%;display:inline-block;}".
     "label{color:#888;font-size:60%;}".
     "#loginform{width:300px;margin:30px auto;}".
+    "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
     "</style>".
     "</head>".
     "<body>".
@@ -273,7 +274,7 @@ trait ContentifierAdmin
           break;
       }
     }
-    $output .= "</div></body></html>";
+    $output .= "</div><footer>Built with <a href='https://github.com/Gargaj/contentifier'>Contentifier</a></footer></body></html>";
     echo $output;
   }
 };
