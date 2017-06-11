@@ -51,6 +51,8 @@ trait ContentifierAdmin
     "input.submit{width:90%;display:inline-block;}".
     "input.delete{width:10%;display:inline-block;}".
     "label{color:#888;font-size:60%;}".
+    "label.radio{display:inline-block;margin-right:10px;vertical-align:sub;color:#444;font-size:80%;}".
+    "label.radio input{display:inline;width:auto;}".
     "#loginform{width:300px;margin:30px auto;}".
     "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
     "</style>".
@@ -202,7 +204,7 @@ trait ContentifierAdmin
                 $output .= "</tr>";
               }
               $output .= "<tr>";
-              $output .= "<td colspan='3'><a href='".$this->escape($this->buildurl("admin",array("section"=>"users","add"=>"new")))."'>Add new user</a></td>";
+              $output .= "<td colspan='2'><a href='".$this->escape($this->buildurl("admin",array("section"=>"users","add"=>"new")))."'>Add new user</a></td>";
               $output .= "</tr>";
               $output .= "</table>";
             }
@@ -221,6 +223,7 @@ trait ContentifierAdmin
                 "title"=>$_POST["title"],
                 "slug"=>$_POST["slug"],
                 "content"=>$_POST["content"],
+                "format"=>$_POST["format"],
               );
               if ($_POST["pageID"])
               {
@@ -244,6 +247,11 @@ trait ContentifierAdmin
               $output .= "<input name='slug' value='".$this->escape($page->slug)."' required='yes'/>";
               $output .= "<label>Page contents:</label>";
               $output .= "<textarea name='content'>".$this->escape($page->content)."</textarea>";
+              $output .= "<label>Page format:</label>";
+              $output .= "<div>";
+              $output .= "<label class='radio'><input type='radio' name='format' value='text'".(($page->format=="text"||!$page->format)?"checked='checked'":"")."> Plain text</label>";
+              $output .= "<label class='radio'><input type='radio' name='format' value='HTML'".($page->format=="html"?"checked='checked'":"")."> HTML</label>";
+              $output .= "</div>";
               if ($_GET["pageID"])
               {
                 $output .= "<input type='hidden' name='pageID' value='".$this->escape($_GET["pageID"])."'/>";
