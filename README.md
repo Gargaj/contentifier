@@ -1,6 +1,6 @@
 # contentifier
-Single file website / content engine inspired by http://github.com/vrana/adminer - currently
-weighs about 20k, allows for Wordpress-like content management.
+Single file website / content engine aimed to be a combination of the compactness
+of http://github.com/vrana/adminer and the featureset of Wordpress. Currently around 20 kilobytes.
 
 ## Warning
 Still heavily work in progress; no first user experience, etc., not documented well.
