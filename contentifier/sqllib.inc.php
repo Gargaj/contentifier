@@ -31,7 +31,7 @@ class SQLLib {
   }
 
   function Disconnect()
-	{
+  {
     mysqli_close($this->link);
   }
 
@@ -271,7 +271,7 @@ class SQLSelect
   var $offset;
 
   function SQLSelect()
-	{
+  {
     $this->fields = array();
     $this->tables = array();
     $this->conditions = array();
@@ -316,7 +316,7 @@ class SQLSelect
       $this->offset = $offset;
   }
   function GetQuery()
-	{
+  {
     if (!count($this->tables))
       throw new Exception("[sqlselect] No tables specified!");
 
