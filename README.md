@@ -1,6 +1,6 @@
 # Contentifier
 Single file website / content engine aimed to be a combination of the compactness
-of http://github.com/vrana/adminer and the featureset of Wordpress. Currently around 20 kilobytes.
+of http://github.com/vrana/adminer and the featureset of Wordpress. Currently under 30 kilobytes.
 
 ![admin screenshot](https://user-images.githubusercontent.com/1702533/27014035-87b2df36-4ef0-11e7-89fb-af5b6caf9bd5.png)
 
@@ -17,15 +17,27 @@ include_once("contentifier.php");
 
 class MyContentifier extends Contentifier
 {
+  // if you don't specify anything else, it'll try to connect
+  // to localhost using "contentifier" as db and user name
   public function sqlpass() { return "your-sql-password-here"; }
 }
 
 $contentifier = new MyContentifier();
-$contentifier->run();
+$contentifier->install();
 ?>
 ```
-That's it.
+Now load it in a browser. When it prompts you for the first user, create one.
+Once that's done, replace 
+``` php
+$contentifier->install();
+```
+with
+``` php
+$contentifier->run();
+```
+That's it. Now you can hit the admin interface to create some content.
 
+### Semantic URLs
 You can also sweeten the URLs by using a `.htaccess` like this:
 ```
 <IfModule mod_rewrite.c>
