@@ -375,6 +375,8 @@ trait ContentifierAdmin
     "input.submit{width:90%;display:inline-block;}".
     "input.delete{width:10%;display:inline-block;}".
     "label{color:#888;font-size:60%;}".
+    "label.radio{display:inline-block;margin-right:10px;vertical-align:sub;color:#444;font-size:80%;}".
+    "label.radio input{display:inline;width:auto;}".
     "#loginform{width:300px;margin:30px auto;}".
     "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
     "</style>".
@@ -526,7 +528,7 @@ trait ContentifierAdmin
                 $output .= "</tr>";
               }
               $output .= "<tr>";
-              $output .= "<td colspan='3'><a href='".$this->escape($this->buildurl("admin",array("section"=>"users","add"=>"new")))."'>Add new user</a></td>";
+              $output .= "<td colspan='2'><a href='".$this->escape($this->buildurl("admin",array("section"=>"users","add"=>"new")))."'>Add new user</a></td>";
               $output .= "</tr>";
               $output .= "</table>";
             }
@@ -545,6 +547,7 @@ trait ContentifierAdmin
                 "title"=>$_POST["title"],
                 "slug"=>$_POST["slug"],
                 "content"=>$_POST["content"],
+                "format"=>$_POST["format"],
               );
               if ($_POST["pageID"])
               {
@@ -568,6 +571,11 @@ trait ContentifierAdmin
               $output .= "<input name='slug' value='".$this->escape($page->slug)."' required='yes'/>";
               $output .= "<label>Page contents:</label>";
               $output .= "<textarea name='content'>".$this->escape($page->content)."</textarea>";
+              $output .= "<label>Page format:</label>";
+              $output .= "<div>";
+              $output .= "<label class='radio'><input type='radio' name='format' value='text'".(($page->format=="text"||!$page->format)?"checked='checked'":"")."> Plain text</label>";
+              $output .= "<label class='radio'><input type='radio' name='format' value='HTML'".($page->format=="html"?"checked='checked'":"")."> HTML</label>";
+              $output .= "</div>";
               if ($_GET["pageID"])
               {
                 $output .= "<input type='hidden' name='pageID' value='".$this->escape($_GET["pageID"])."'/>";
@@ -733,12 +741,63 @@ abstract class Contentifier
   }
   public function install()
   {
-    $init = array(
-      "CREATE TABLE `menu` ( `id` int(11) NOT NULL AUTO_INCREMENT, `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT;",
-      "CREATE TABLE `pages` ( `id` int(11) NOT NULL AUTO_INCREMENT, `slug` varchar(128) NOT NULL, `title` text NOT NULL, `content` text NOT NULL, `format` enum('text','html','wiki') NOT NULL DEFAULT 'text', PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT;",
-      "CREATE TABLE `users` ( `id` int(11) NOT NULL AUTO_INCREMENT, `username` varchar(64) NOT NULL, `password` varchar(128) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB DEFAULT;"
-    );
-    foreach($init as $v) $this->sql->Query($v);
+    $this->sql = new SQLLib();
+    $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
+    $output = "<!DOCTYPE html>\n<html>".
+    "<head>".
+    "<title>Contentifier Install</title>".
+    "<style type=\"text/css\">".
+    "*{margin:0;padding:0;}".
+    "body {font-family:'segoe ui',sans-serif;background:#ccc;}".
+    "a {color:black;}".
+    "h1 {background:#444;color:white;border:0;border-bottom:1px solid #888;padding:5px;}".
+    "input{display:block;width:100%;padding:5px;margin:5px 0px;}".
+    "textarea{height:calc(100vh - 400px);}".
+    "input.submit{width:90%;display:inline-block;}".
+    "input.delete{width:10%;display:inline-block;}".
+    "label{color:#888;font-size:60%;}".
+    "label.radio{display:inline-block;margin-right:10px;vertical-align:sub;color:#444;font-size:80%;}".
+    "label.radio input{display:inline;width:auto;}".
+    "form{width:300px;margin:30px auto;}".
+    "p{width:300px;margin:30px auto;}".
+    "code{font-family;monospace;background:#eee;color:black;}".
+    "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
+    "</style>".
+    "</head>".
+    "<body>".
+    "<h1>Contentifier Installation</h1>";
+    if ($_POST["username"] && $_POST["password"])
+    {
+      $init = array(
+        "CREATE TABLE `menu` ( `id` int(11) NOT NULL AUTO_INCREMENT, `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB;",
+        "CREATE TABLE `pages` ( `id` int(11) NOT NULL AUTO_INCREMENT, `slug` varchar(128) NOT NULL, `title` text NOT NULL, `content` text NOT NULL, `format` enum('text','html','wiki') NOT NULL DEFAULT 'text', PRIMARY KEY (`id`), UNIQUE KEY `slug` (`slug`)) ENGINE=InnoDB;",
+        "CREATE TABLE `users` ( `id` int(11) NOT NULL AUTO_INCREMENT, `username` varchar(64) NOT NULL, `password` varchar(128) NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `username` (`username`)) ENGINE=InnoDB;"
+      );
+      foreach($init as $v) $this->sql->Query($v);
+      $this->sql->insertRow("users",array(
+        "username" => $_POST["username"],
+        "password" => password_hash($_POST["password"],PASSWORD_DEFAULT)
+      ));
+      $output .= "<p>Installation successful; now replace the <code>\$...-&gt;install()</code> in your main entry point".
+      " file with <code>\$...-&gt;run()</code> and <a href='".$this->buildurl("admin")."'>load the admin to add some content</a>.</p>";
+    }
+    else
+    {
+      $output .=
+      "<form method='post'>".
+      "<h2>Create your first user</h2>".
+      "<label>Username:</label>".
+      "<input name='username' required='yes'/>".
+      "<label>Password:</label>".
+      "<input name='password' required='yes' type='password'/>".
+      "<input type='hidden' name='token' value='".$this->escape($token)."'/>".
+      "<input type='submit' name='createUser' value='Create'/>".
+      "</form>";
+    }
+    $output .=
+    "</body>".
+    "</html>";
+    echo $output;
   }
   public function run()
   {
