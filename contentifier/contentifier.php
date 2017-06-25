@@ -89,9 +89,9 @@ abstract class Contentifier
     }
     return $out;
   }
-  function content()
+  function content( $slug = null )
   {
-    $row = $this->getpagebyslug($this->slug);
+    $row = $this->getpagebyslug($slug?:$this->slug);
     if ($row)
     {
       $content = $row->content;
