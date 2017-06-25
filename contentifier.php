@@ -705,16 +705,13 @@ abstract class Contentifier
       }
       return $content;
     }
-    else
-    {
-      return "<h1>404</h1><p>Page '".$this->escape($this->slug)."' not found</p>";
-    }
+    return false;
   }
   function contenttokens()
   {
     return array(
       "{%MENU%}" => $this->menu(),
-      "{%CONTENT%}" => $this->content(),
+      "{%CONTENT%}" => $this->content() ?: ("<h1>404</h1><p>Page '".$this->escape($this->slug)."' not found</p>"),
       "{%ROOTURL%}" => $this->rooturl(),
       "{%SLUG%}" => $this->slug(),
     );
