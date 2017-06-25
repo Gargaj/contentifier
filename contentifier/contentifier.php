@@ -121,11 +121,6 @@ abstract class Contentifier
   }
   function render()
   {
-    if ($this->slug == "admin")
-    {
-      $this->renderadmin();
-      return;
-    }
     $tokens = $this->contenttokens();
     $template = $this->template();
     $template = str_replace(array_keys($tokens),array_values($tokens),$template);
@@ -201,7 +196,14 @@ abstract class Contentifier
     $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
     $this->initurls();  
     $this->extractslug();
-    $this->render();
+    if ($this->slug == "admin")
+    {
+      $this->renderadmin();
+    }
+    else
+    {
+      $this->render();
+    }
   }
 }
 ?>
