@@ -394,7 +394,10 @@ trait ContentifierAdmin
       "<nav><ul>".
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"pages")))."'>Pages</a></li>".
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"menu")))."'>Menu</a></li>".
-      "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"users")))."'>Users</a></li>".
+      "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"users")))."'>Users</a></li>";
+      foreach($this->plugins as $plugin)
+        $output .= "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>$plugin->id())))."'>".$this->escape($plugin->adminmenuitem())."</a></li>";
+      $output.=
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"logout")))."'>Log out</a></li>".
       "</ul></nav><div id='content'>";
       switch($_GET["section"])
@@ -536,71 +539,83 @@ trait ContentifierAdmin
           break;
         default:
           {
-            if ($_POST["deletePage"])
+            $found = false;
+            foreach($this->plugins as $plugin)
             {
-              $this->sql->query($this->sql->escape("delete from pages where id=%d",$_POST["pageID"]));
-              $this->redirect( $this->buildurl("admin",array("section"=>"pages")) );
-            }
-            else if ($_POST["submitPage"])
-            {
-              $a = array(
-                "title"=>$_POST["title"],
-                "slug"=>$_POST["slug"],
-                "content"=>$_POST["content"],
-                "format"=>$_POST["format"],
-              );
-              if ($_POST["pageID"])
+              if ($_GET["section"] == $plugin->id())
               {
-                $this->sql->updateRow("pages",$a,$this->sql->escape("id=%d",$_POST["pageID"]));
-                $this->redirect( $this->buildurl("admin",array("section"=>"pages","pageID"=>$_POST["pageID"])) );
+                $output .= $plugin->admin();
+                $found = true;
+              }
+            }
+            if (!$found)
+            {
+              if ($_POST["deletePage"])
+              {
+                $this->sql->query($this->sql->escape("delete from pages where id=%d",$_POST["pageID"]));
+                $this->redirect( $this->buildurl("admin",array("section"=>"pages")) );
+              }
+              else if ($_POST["submitPage"])
+              {
+                $a = array(
+                  "title"=>$_POST["title"],
+                  "slug"=>$_POST["slug"],
+                  "content"=>$_POST["content"],
+                  "format"=>$_POST["format"],
+                );
+                if ($_POST["pageID"])
+                {
+                  $this->sql->updateRow("pages",$a,$this->sql->escape("id=%d",$_POST["pageID"]));
+                  $this->redirect( $this->buildurl("admin",array("section"=>"pages","pageID"=>$_POST["pageID"])) );
+                }
+                else
+                {
+                  $id = $this->sql->insertRow("pages",$a);
+                  $this->redirect( $this->buildurl("admin",array("section"=>"pages","pageID"=>$id)) );
+                }
+              }
+              if ($_GET["pageID"] || $_GET["add"]=="new")
+              {
+                $page = $this->sql->selectRow($this->sql->escape("select * from pages where id='%d'",$_GET["pageID"]));
+                $output .= "<form method='post'>";
+                $output .= "<h2>Page: ".$this->escape($page->title)."</h2>";
+                $output .= "<label>Page title:</label>";
+                $output .= "<input name='title' value='".$this->escape($page->title)."' required='yes'/>";
+                $output .= "<label>Page slug:</label>";
+                $output .= "<input name='slug' value='".$this->escape($page->slug)."' required='yes'/>";
+                $output .= "<label>Page contents:</label>";
+                $output .= "<textarea name='content'>".$this->escape($page->content)."</textarea>";
+                $output .= "<label>Page format:</label>";
+                $output .= "<div>";
+                $output .= "<label class='radio'><input type='radio' name='format' value='text'".(($page->format=="text"||!$page->format)?"checked='checked'":"")."> Plain text</label>";
+                $output .= "<label class='radio'><input type='radio' name='format' value='HTML'".($page->format=="html"?"checked='checked'":"")."> HTML</label>";
+                $output .= "</div>";
+                if ($_GET["pageID"])
+                {
+                  $output .= "<input type='hidden' name='pageID' value='".$this->escape($_GET["pageID"])."'/>";
+                }
+                $output .= "<input type='submit' name='submitPage' class='submit' value='Save'/>";
+                $output .= "<input type='submit' name='deletePage' class='delete' value='Delete'/>";
+                $output .= "</form>";
               }
               else
               {
-                $id = $this->sql->insertRow("pages",$a);
-                $this->redirect( $this->buildurl("admin",array("section"=>"pages","pageID"=>$id)) );
-              }
-            }
-            if ($_GET["pageID"] || $_GET["add"]=="new")
-            {
-              $page = $this->sql->selectRow($this->sql->escape("select * from pages where id='%d'",$_GET["pageID"]));
-              $output .= "<form method='post'>";
-              $output .= "<h2>Page: ".$this->escape($page->title)."</h2>";
-              $output .= "<label>Page title:</label>";
-              $output .= "<input name='title' value='".$this->escape($page->title)."' required='yes'/>";
-              $output .= "<label>Page slug:</label>";
-              $output .= "<input name='slug' value='".$this->escape($page->slug)."' required='yes'/>";
-              $output .= "<label>Page contents:</label>";
-              $output .= "<textarea name='content'>".$this->escape($page->content)."</textarea>";
-              $output .= "<label>Page format:</label>";
-              $output .= "<div>";
-              $output .= "<label class='radio'><input type='radio' name='format' value='text'".(($page->format=="text"||!$page->format)?"checked='checked'":"")."> Plain text</label>";
-              $output .= "<label class='radio'><input type='radio' name='format' value='HTML'".($page->format=="html"?"checked='checked'":"")."> HTML</label>";
-              $output .= "</div>";
-              if ($_GET["pageID"])
-              {
-                $output .= "<input type='hidden' name='pageID' value='".$this->escape($_GET["pageID"])."'/>";
-              }
-              $output .= "<input type='submit' name='submitPage' class='submit' value='Save'/>";
-              $output .= "<input type='submit' name='deletePage' class='delete' value='Delete'/>";
-              $output .= "</form>";
-            }
-            else
-            {
-              $pages = $this->sql->selectRows($this->sql->escape("select * from pages"));
-              $output .= "<h2>Pages</h2>";
-              $output .= "<table>";
-              foreach($pages as $page)
-              {
+                $pages = $this->sql->selectRows($this->sql->escape("select * from pages"));
+                $output .= "<h2>Pages</h2>";
+                $output .= "<table>";
+                foreach($pages as $page)
+                {
+                  $output .= "<tr>";
+                  $output .= "<td>".$this->escape($page->id)."</td>";
+                  $output .= "<td><a href='".$this->escape($this->buildurl("admin",array("section"=>"pages","pageID"=>$page->id)))."'>".$this->escape($page->slug)."</a></td>";
+                  $output .= "<td>".$this->escape($page->title)."</td>";
+                  $output .= "</tr>";
+                }
                 $output .= "<tr>";
-                $output .= "<td>".$this->escape($page->id)."</td>";
-                $output .= "<td><a href='".$this->escape($this->buildurl("admin",array("section"=>"pages","pageID"=>$page->id)))."'>".$this->escape($page->slug)."</a></td>";
-                $output .= "<td>".$this->escape($page->title)."</td>";
+                $output .= "<td colspan='3'><a href='".$this->escape($this->buildurl("admin",array("section"=>"pages","add"=>"new")))."'>Add new page</a></td>";
                 $output .= "</tr>";
+                $output .= "</table>";
               }
-              $output .= "<tr>";
-              $output .= "<td colspan='3'><a href='".$this->escape($this->buildurl("admin",array("section"=>"pages","add"=>"new")))."'>Add new page</a></td>";
-              $output .= "</tr>";
-              $output .= "</table>";
             }
           }
           break;
@@ -610,6 +625,14 @@ trait ContentifierAdmin
     echo $output;
   }
 };
+abstract class ContentifierPlugin
+{
+  abstract public function id();
+  abstract public function slugregex();
+  abstract public function content($match);
+  abstract public function adminmenuitem();
+  abstract public function admin();
+}
 abstract class Contentifier
 {
   
@@ -621,6 +644,7 @@ abstract class Contentifier
   abstract public function sqlpass();
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
+  private $plugins = array();
   use ContentifierAdmin;
   function escape($s)
   {
@@ -693,9 +717,24 @@ abstract class Contentifier
     }
     return $out;
   }
+  function addplugin( $instance )
+  {
+    if (is_a($instance,"ContentifierPlugin"))
+    {
+      $this->plugins[] = $instance;
+    }
+  }
   function content( $slug = null )
   {
-    $row = $this->getpagebyslug($slug?:$this->slug);
+    $slug = $slug?:$this->slug;
+    foreach($this->plugins as $plugin)
+    {
+      if (preg_match("/".$plugin->slugregex()."/",$slug,$match))
+      {
+        return $plugin->content($match);
+      }
+    }
+    $row = $this->getpagebyslug($slug);
     if ($row)
     {
       $content = $row->content;
@@ -709,9 +748,15 @@ abstract class Contentifier
   }
   function contenttokens()
   {
+    $content = $this->content();
+    if ($content === false || $content === null)
+    {
+      header("HTTP/1.1 404 Not Found");
+      $content = "<h1>404</h1><p>Page '".$this->escape($this->slug)."' not found</p>";
+    }
     return array(
       "{%MENU%}" => $this->menu(),
-      "{%CONTENT%}" => $this->content() ?: ("<h1>404</h1><p>Page '".$this->escape($this->slug)."' not found</p>"),
+      "{%CONTENT%}" => $content,
       "{%ROOTURL%}" => $this->rooturl(),
       "{%SLUG%}" => $this->slug(),
     );

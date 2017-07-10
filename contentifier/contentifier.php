@@ -2,6 +2,15 @@
 include_once("sqllib.inc.php");
 include_once("contentifier-admin.inc.php");
 
+abstract class ContentifierPlugin
+{
+  abstract public function id();
+  abstract public function slugregex();
+  abstract public function content($match);
+  abstract public function adminmenuitem();
+  abstract public function admin();
+}
+
 abstract class Contentifier
 {
   // API FUNCTIONS
@@ -13,7 +22,8 @@ abstract class Contentifier
   abstract public function sqlpass();
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
-
+  private $plugins = array();
+  
   use ContentifierAdmin;  
   
   function escape($s)
@@ -89,9 +99,24 @@ abstract class Contentifier
     }
     return $out;
   }
+  function addplugin( $instance )
+  {
+    if (is_a($instance,"ContentifierPlugin"))
+    {
+      $this->plugins[] = $instance;
+    }
+  }
   function content( $slug = null )
   {
-    $row = $this->getpagebyslug($slug?:$this->slug);
+    $slug = $slug?:$this->slug;
+    foreach($this->plugins as $plugin)
+    {
+      if (preg_match("/".$plugin->slugregex()."/",$slug,$match))
+      {
+        return $plugin->content($match);
+      }
+    }
+    $row = $this->getpagebyslug($slug);
     if ($row)
     {
       $content = $row->content;
@@ -105,9 +130,15 @@ abstract class Contentifier
   }
   function contenttokens()
   {
+    $content = $this->content();
+    if ($content === false || $content === null)
+    {
+      header("HTTP/1.1 404 Not Found");
+      $content = "<h1>404</h1><p>Page '".$this->escape($this->slug)."' not found</p>";
+    }
     return array(
       "{%MENU%}" => $this->menu(),
-      "{%CONTENT%}" => $this->content() ?: ("<h1>404</h1><p>Page '".$this->escape($this->slug)."' not found</p>"),
+      "{%CONTENT%}" => $content,
       "{%ROOTURL%}" => $this->rooturl(),
       "{%SLUG%}" => $this->slug(),
     );
