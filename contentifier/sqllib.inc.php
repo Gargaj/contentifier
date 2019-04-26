@@ -1,8 +1,26 @@
-<?
+<?php
 global $SQLLIB_ARRAYS_CLEANED;
 $SQLLIB_ARRAYS_CLEANED = false;
 
-class SQLLib {
+class SQLLibException extends Exception 
+{ 
+  public function __construct($message = null, $code = 0, $query = "")
+  {
+    parent::__construct($message, $code);
+    $this->query = $query;
+  }
+  public function __toString()
+  {
+    $e .= date("Y-m-d H:i:s");
+    $e .= "\nError: ".$this->getMessage()."\n";
+    $e .= "\nQuery: ".$this->query."\n";
+    $e .= "\nTrace: ".$this->getTraceAsString();
+    return $e;
+  }
+}
+
+class SQLLib
+{
   public $link;
   public $debugMode = false;
   public $charset = "";
@@ -37,18 +55,20 @@ class SQLLib {
 
   function Query($cmd)
   {
+    global $SQLLIB_QUERIES;
+
     if ($this->debugMode)
     {
       $start = microtime(true);
       $r = @mysqli_query($this->link,$cmd);
-      if(!$r) throw new Exception("<pre>\nMySQL ERROR:\nError: ".mysqli_error($this->link)."\nQuery: ".$cmd);
+      if(!$r) throw new SQLLibException(mysqli_error($this->link),0,$cmd);
       $end = microtime(true);
       $this->queries[$cmd] = $end - $start;
     }
     else
     {
       $r = @mysqli_query($this->link,$cmd);
-      if(!$r) throw new Exception("<pre>\nMySQL ERROR:\nError: ".mysqli_error($this->link)."\nQuery: ".$cmd);
+      if(!$r) throw new SQLLibException(mysqli_error($this->link),0,$cmd);
       $this->queries[] = "*";
     }
 
@@ -99,15 +119,28 @@ class SQLLib {
     {
       $cmd .= " ON DUPLICATE KEY UPDATE ";
       $set = array();
-      foreach($onDup as $k=>$v) {
-        if ($v===NULL)
+      if ($onDup)
+      {
+        foreach($onDup as $k=>$v)
         {
-          $set[] = sprintf("`%s`=null",mysqli_real_escape_string($this->link,$k));
+          if ($v===NULL)
+          {
+            $set[] = sprintf("`%s`=null",mysqli_real_escape_string($this->link,$k));
+          }
+          else if ($k{0}=="@")
+          {
+            $set[] = sprintf("`%s`=%s",mysqli_real_escape_string($this->link,substr($k,1)),mysqli_real_escape_string($this->link,$v));
+          }
+          else
+          {
+            $set[] = sprintf("`%s`='%s'",mysqli_real_escape_string($this->link,$k),mysqli_real_escape_string($this->link,$v));
+          }
         }
-        else
-        {
-          $set[] = sprintf("`%s`='%s'",mysqli_real_escape_string($this->link,$k),mysqli_real_escape_string($this->link,$v));
-        }
+      }
+      else
+      {
+        $key = reset(array_keys($o));
+        $set[] = $key . "=" . $key;
       }
       $cmd .= implode(", ",$set);
     }
@@ -231,11 +264,9 @@ class SQLLib {
   function Escape()
   {
     $args = func_get_args();
-    reset($args);
-    next($args);
-    while (list($key, $value) = each($args))
-      $args[$key] = mysqli_real_escape_string( $this->link, $args[$key] );
-  
+    for ($key = 1; $key < count($args); $key++) {
+      $args[$key] = mysqli_real_escape_string($this->link, $args[$key]);
+    }
     return call_user_func_array("sprintf", $args);
   }
 }
@@ -269,7 +300,7 @@ class SQLSelect
   var $limit;
   var $offset;
 
-  function SQLSelect()
+  function __construct()
   {
     $this->fields = array();
     $this->tables = array();
