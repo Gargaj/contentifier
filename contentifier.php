@@ -610,9 +610,9 @@ trait ContentifierAdmin
                 $output .= "<form method='post'>";
                 $output .= "<h2>Page: ".$this->escape($page->title)."</h2>";
                 $output .= "<label>Page title:</label>";
-                $output .= "<input name='title' value='".$this->escape($page->title)."' required='yes'/>";
+                $output .= "<input name='title' value='".$this->escape($page->title)."' required='yes' onkeyup='document.querySelector(\"#form-slug\").value=this.value.replace(/([^a-zA-Z0-9]+)/gim,\"-\").toLowerCase()'/>";
                 $output .= "<label>Page slug:</label>";
-                $output .= "<input name='slug' value='".$this->escape($page->slug)."' required='yes'/>";
+                $output .= "<input name='slug' value='".$this->escape($page->slug)."' required='yes' id='form-slug'/>";
                 $output .= "<label>Page contents:</label>";
                 $output .= "<textarea name='content'>".$this->escape($page->content)."</textarea>";
                 $output .= "<label>Page format:</label>";
