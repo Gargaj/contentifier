@@ -72,7 +72,12 @@ trait ContentifierAdmin
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"menu")))."'>Menu</a></li>".
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"users")))."'>Users</a></li>";
       foreach($this->plugins as $plugin)
-        $output .= "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>$plugin->id())))."'>".$this->escape($plugin->adminmenuitem())."</a></li>";
+      {
+        if ($plugin->adminmenuitem())
+        {
+          $output .= "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>$plugin->id())))."'>".$this->escape($plugin->adminmenuitem())."</a></li>";
+        }
+      }
       $output.=
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"logout")))."'>Log out</a></li>".
       "</ul></nav><div id='content'>";

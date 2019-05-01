@@ -5,10 +5,20 @@ include_once("contentifier-admin.inc.php");
 abstract class ContentifierPlugin
 {
   abstract public function id();
+  abstract public function adminmenuitem();
+  public function admin() { return null; }
+}
+
+abstract class ContentifierPagePlugin extends ContentifierPlugin
+{
   abstract public function slugregex();
   abstract public function content($match);
-  abstract public function adminmenuitem();
-  abstract public function admin();
+}
+
+abstract class ContentifierShortCodePlugin extends ContentifierPlugin
+{
+  abstract public function shortcode();
+  abstract public function content();
 }
 
 abstract class Contentifier
@@ -111,7 +121,7 @@ abstract class Contentifier
     $slug = $slug?:$this->slug;
     foreach($this->plugins as $plugin)
     {
-      if (preg_match("/".$plugin->slugregex()."/",$slug,$match))
+      if (is_a($plugin,"ContentifierPagePlugin") && preg_match("/".$plugin->slugregex()."/",$slug,$match))
       {
         return $plugin->content($match);
       }
@@ -123,6 +133,13 @@ abstract class Contentifier
       switch($row->format)
       {
         case "text": $content = nl2br($this->escape($content)); break;
+      }
+      foreach($this->plugins as $plugin)
+      {
+        if (is_a($plugin,"ContentifierShortCodePlugin"))
+        {
+          $content = str_replace("{{".$plugin->shortcode()."}}",$plugin->content(),$content);
+        }
       }
       return $content;
     }
