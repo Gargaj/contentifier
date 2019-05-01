@@ -19,7 +19,7 @@ function parse_php( $filename, $minify = true, $include = false )
       $v = rtrim($v);
     }
     $v = preg_replace_callback("/\/\/.*/",function($i){ return strstr($i[0],'"')===false ? "" : $i[0]; },$v);
-    if ($v == "<?")
+    if ($v == "<?" || $v == "<?php")
     {
       if ($include) $v = "";
       else $v = "<?php ";      

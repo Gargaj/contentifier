@@ -1,5 +1,4 @@
 <?php 
-<?php
 global $SQLLIB_ARRAYS_CLEANED;
 $SQLLIB_ARRAYS_CLEANED = false;
 class SQLLibException extends Exception
