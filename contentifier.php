@@ -17,67 +17,59 @@ class SQLLibException extends Exception
     return $e;
   }
 }
-class SQLLib
-{
-  public $link;
-  public $debugMode = false;
-  public $charset = "";
+class SQLLib {
+  public static $link;
+  public static $debugMode = false;
+  public static $charset = "";
   public $queries = array();
-  function Connect($SQL_HOST,$SQL_USERNAME,$SQL_PASSWORD,$SQL_DATABASE)
+  public function Connect($dsn, $username = null, $password = null, $options = null)
   {
-    $this->link = mysqli_connect($SQL_HOST,$SQL_USERNAME,$SQL_PASSWORD,$SQL_DATABASE);
-    if (mysqli_connect_errno($this->link))
-      die("Unable to connect MySQL: ".mysqli_connect_error());
-    $charsets = array("utf8mb4","utf8");
-    $this->charset = "";
-    foreach($charsets as $c)
+    try
     {
-      if (mysqli_set_charset($this->link,$c))
-      {
-        $this->charset = $c;
-        break;
-      }
+      $this->link = new PDO($dsn, $username, $password, $options);
     }
-    if (!$this->charset)
+    catch (PDOException $e)
     {
-      die("Error loading any of the character sets:");
+      die("Unable to connect SQLite with PDO: ".$e->getMessage());
     }
+    $this->link->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+    $this->link->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);
   }
-  function Disconnect()
+  public function Disconnect()
   {
-    mysqli_close($this->link);
+    $this->link = null;
   }
-  function Query($cmd)
+  public function Query($cmd)
   {
     global $SQLLIB_QUERIES;
     if ($this->debugMode)
     {
       $start = microtime(true);
-      $r = @mysqli_query($this->link,$cmd);
-      if(!$r) throw new SQLLibException(mysqli_error($this->link),0,$cmd);
+      $r = @$this->link->query($cmd);
+      if(!$r) throw new SQLLibException(implode("\n",$this->link->errorInfo()),0,$cmd);
       $end = microtime(true);
-      $this->queries[$cmd] = $end - $start;
+      $SQLLIB_QUERIES[$cmd] = $end - $start;
     }
     else
     {
-      $r = @mysqli_query($this->link,$cmd);
-      if(!$r) throw new SQLLibException(mysqli_error($this->link),0,$cmd);
-      $this->queries[] = "*";
+      $r = @$this->link->query($cmd);
+      if(!$r) throw new SQLLibException(implode("\n",$this->link->errorInfo()),0,$cmd);
+      $SQLLIB_QUERIES[] = "*";
     }
     return $r;
   }
-  function Fetch($r)
+  public function Fetch($r)
   {
-    return mysqli_fetch_object($r);
+    return $r->fetchObject();
   }
-  function SelectRows($cmd)
+  public function SelectRows($cmd)
   {
     $r = $this->Query($cmd);
     $a = Array();
     while($o = $this->Fetch($r)) $a[]=$o;
     return $a;
   }
-  function SelectRow($cmd)
+  public function SelectRow($cmd)
   {
     if (stristr($cmd,"select ")!==false && stristr($cmd," limit ")===false) 
       $cmd .= " LIMIT 1";
@@ -85,7 +77,7 @@ class SQLLib
     $a = $this->Fetch($r);
     return $a;
   }
-  function InsertRow($table,$o,$onDup = array())
+  public function InsertRow($table,$o)
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
@@ -95,69 +87,16 @@ class SQLLib
     $keys = Array();
     $values = Array();
     foreach($a as $k=>$v) {
-      $keys[]="`".mysqli_real_escape_string($this->link,$k)."`";
-      if ($v!==NULL) $values[]="'".mysqli_real_escape_string($this->link,$v)."'";
+      $keys[]=$this->Quote($k);
+      if ($v!==NULL) $values[]="'".$this->Quote($v)."'";
       else           $values[]="null";
     }
-    $cmd = sprintf("insert %s (%s) values (%s)",
+    $cmd = sprintf("insert into %s (%s) values (%s)",
       $table,implode(", ",$keys),implode(", ",$values));
-    if ($onDup)
-    {
-      $cmd .= " ON DUPLICATE KEY UPDATE ";
-      $set = array();
-      if ($onDup)
-      {
-        foreach($onDup as $k=>$v)
-        {
-          if ($v===NULL)
-          {
-            $set[] = sprintf("`%s`=null",mysqli_real_escape_string($this->link,$k));
-          }
-          else if ($k{0}=="@")
-          {
-            $set[] = sprintf("`%s`=%s",mysqli_real_escape_string($this->link,substr($k,1)),mysqli_real_escape_string($this->link,$v));
-          }
-          else
-          {
-            $set[] = sprintf("`%s`='%s'",mysqli_real_escape_string($this->link,$k),mysqli_real_escape_string($this->link,$v));
-          }
-        }
-      }
-      else
-      {
-        $key = reset(array_keys($o));
-        $set[] = $key . "=" . $key;
-      }
-      $cmd .= implode(", ",$set);
-    }
     $r = $this->Query($cmd);
-    return mysqli_insert_id($this->link);
+    return $this->link->lastInsertId();
   }
-  function InsertMultiRow($table,$arr)
-  {
-    global $SQLLIB_ARRAYS_CLEANED;
-    if (!$SQLLIB_ARRAYS_CLEANED)
-      trigger_error("Arrays not cleaned before InsertMultiRow!",E_USER_ERROR);
-    $keys = Array();
-    $allValues = Array();
-    foreach($arr as $o)
-    {
-      if (is_object($o)) $a = get_object_vars($o);
-      else if (is_array($o)) $a = $o;
-      $keys = Array();
-      $values = Array();
-      foreach($a as $k=>$v) {
-        $keys[]="`".mysqli_real_escape_string($this->link,$k)."`";
-        if ($v!==NULL) $values[]="'".mysqli_real_escape_string($this->link,$v)."'";
-        else           $values[]="null";
-      }
-      $allValues[] = "(".implode(", ",$values).")";
-    }
-    $cmd = sprintf("insert %s (%s) values %s",
-      $table,implode(", ",$keys),implode(", ",$allValues));
-    $r = $this->Query($cmd);
-  }
-  function UpdateRow($table,$o,$where)
+  public function UpdateRow($table,$o,$where)
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
@@ -168,11 +107,11 @@ class SQLLib
     foreach($a as $k=>$v) {
       if ($v===NULL)
       {
-        $set[] = sprintf("`%s`=null",mysqli_real_escape_string($this->link,$k));
+        $set[] = sprintf("%s=null",$this->Quote($k));
       }
       else
       {
-        $set[] = sprintf("`%s`='%s'",mysqli_real_escape_string($this->link,$k),mysqli_real_escape_string($this->link,$v));
+        $set[] = sprintf("%s='%s'",$this->Quote($k),$this->Quote($v));
       }
     }
     $cmd = sprintf("update %s set %s where %s",
@@ -180,7 +119,7 @@ class SQLLib
     $this->Query($cmd);
   }
   
-  function UpdateRowMulti( $table, $key, $tuples )
+  public function UpdateRowMulti( $table, $key, $tuples )
   {
     if (!count($tuples))
       return;
@@ -189,7 +128,6 @@ class SQLLib
     $fields = array_keys( $tuples[0] );
     $sql = "UPDATE ".$table;
     $keys = array();
-    $cond = "";
     foreach($fields as $field)
     {
       if ($field == $key) continue;
@@ -202,32 +140,32 @@ class SQLLib
     $sql .= " WHERE `".$key."` IN (".implode(",",$keys).")";
     $this->Query($sql);
   }
-  function UpdateOrInsertRow($table,$o,$where)
+  public function UpdateOrInsertRow($table,$o,$where)
   {
     if ($this->SelectRow(sprintf("SELECT * FROM %s WHERE %s",$table,$where)))
       return $this->UpdateRow($table,$o,$where);
     else
       return $this->InsertRow($table,$o);
   }
-  function StartTransaction()
+  public function StartTransaction()
   {
-    mysqli_autocommit($this->link, FALSE);
   }
-  function FinishTransaction()
+  public function FinishTransaction()
   {
-    mysqli_commit($this->link);
-    mysqli_autocommit($this->link, TRUE);
   }
-  function CancelTransaction()
+  public function CancelTransaction()
   {
-    mysqli_rollback($this->link);
-    mysqli_autocommit($this->link, TRUE);
   }
-  function Escape()
+  public function Quote($string)
+  {
+    return substr($this->link->quote($string),1,-1);
+  }
+  public function Escape($string)
   {
     $args = func_get_args();
-    for ($key = 1; $key < count($args); $key++) {
-      $args[$key] = mysqli_real_escape_string($this->link, $args[$key]);
+    for ($key = 1; $key < count($args); $key++)
+    {
+      $args[$key] = $this->Quote($args[$key]);
     }
     return call_user_func_array("sprintf", $args);
   }
@@ -300,9 +238,9 @@ class SQLSelect
   }
   function SetLimit( $limit, $offset = NULL )
   {
-    $this->limit = $limit;
+    $this->limit = (int)$limit;
     if ($offset !== NULL)
-      $this->offset = $offset;
+      $this->offset = (int)$offset;
   }
   function GetQuery()
   {
@@ -336,6 +274,15 @@ class SQLSelect
     }
     return $sql;
   }
+}
+function sprintf_esc()
+{
+  $args = func_get_args();
+  reset($args);
+  next($args);
+  while (list($key, $value) = each($args))
+    $args[$key] = $this->Quote( $args[$key] );
+  return call_user_func_array("sprintf", $args);
 }
 function nop($s) { return $s; }
 function clearArray($a)
@@ -679,12 +626,12 @@ abstract class ContentifierShortCodePlugin extends ContentifierPlugin
 abstract class Contentifier
 {
   
-  public function sqlhost() { return "localhost"; }
+  public function sqldsn() { return "mysql:host=localhost;dbname=contentifier"; }
   public function sqluser() { return "contentifier"; }
-  public function sqldb() { return "contentifier"; }
+  abstract public function sqlpass();
+  public function sqloptions() { return array(); }
   public function templatefile() { return "template.html"; }
   public function rewriteenabled() { return false; }
-  abstract public function sqlpass();
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
   private $plugins = array();
@@ -826,10 +773,15 @@ abstract class Contentifier
   {
     return $this->sql->selectRow($this->sql->escape("select * from pages where slug='%s'",$slug));
   }
+  public function bootstrap()
+  {
+    if (!class_exists("PDO")) die("Contentifier runs on PDO - please install it");
+    $this->sql = new SQLLib();
+    $this->sql->Connect($this->sqldsn(),$this->sqluser(),$this->sqlpass(),$this->sqloptions());
+  }
   public function install()
   {
-    $this->sql = new SQLLib();
-    $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
+    $this->bootstrap();
     $output = "<!DOCTYPE html>\n<html>".
     "<head>".
     "<title>Contentifier Install</title>".
@@ -855,10 +807,13 @@ abstract class Contentifier
     "<h1>Contentifier Installation</h1>";
     if ($_POST["username"] && $_POST["password"])
     {
+      $isMysql = strstr($this->sqldsn(),"mysql")!==false;
+      $primary = $isMysql ? "int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+      $enum = $isMysql ? "enum('text','html','wiki') NOT NULL DEFAULT 'text'" : "text";
       $init = array(
-        "CREATE TABLE `menu` ( `id` int(11) NOT NULL AUTO_INCREMENT, `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB;",
-        "CREATE TABLE `pages` ( `id` int(11) NOT NULL AUTO_INCREMENT, `slug` varchar(128) NOT NULL, `title` text NOT NULL, `content` text NOT NULL, `format` enum('text','html','wiki') NOT NULL DEFAULT 'text', PRIMARY KEY (`id`), UNIQUE KEY `slug` (`slug`)) ENGINE=InnoDB;",
-        "CREATE TABLE `users` ( `id` int(11) NOT NULL AUTO_INCREMENT, `username` varchar(64) NOT NULL, `password` varchar(128) NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `username` (`username`)) ENGINE=InnoDB;"
+        "CREATE TABLE `menu` ( `id` ".$primary.", `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL);",
+        "CREATE TABLE `pages` ( `id` ".$primary.", `slug` varchar(128) NOT NULL UNIQUE, `title` text NOT NULL, `content` text NOT NULL, `format` ".$enum.");",
+        "CREATE TABLE `users` ( `id` ".$primary.", `username` varchar(64) NOT NULL UNIQUE, `password` varchar(128) NOT NULL);"
       );
       foreach($init as $v) $this->sql->Query($v);
       $this->sql->insertRow("users",array(
@@ -888,8 +843,7 @@ abstract class Contentifier
   }
   public function run()
   {
-    $this->sql = new SQLLib();
-    $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
+    $this->bootstrap();
     $this->initurls();
     $this->extractslug();
     if ($this->slug == "admin")

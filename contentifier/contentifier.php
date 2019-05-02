@@ -24,12 +24,13 @@ abstract class ContentifierShortCodePlugin extends ContentifierPlugin
 abstract class Contentifier
 {
   // API FUNCTIONS
-  public function sqlhost() { return "localhost"; }
+  public function sqldsn() { return "mysql:host=localhost;dbname=contentifier"; }
   public function sqluser() { return "contentifier"; }
-  public function sqldb() { return "contentifier"; }
+  abstract public function sqlpass();
+  public function sqloptions() { return array(); }
+
   public function templatefile() { return "template.html"; }
   public function rewriteenabled() { return false; }
-  abstract public function sqlpass();
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
   private $plugins = array();
@@ -175,10 +176,15 @@ abstract class Contentifier
   {
     return $this->sql->selectRow($this->sql->escape("select * from pages where slug='%s'",$slug));
   }
+  public function bootstrap()
+  {
+    if (!class_exists("PDO")) die("Contentifier runs on PDO - please install it");
+    $this->sql = new SQLLib();
+    $this->sql->Connect($this->sqldsn(),$this->sqluser(),$this->sqlpass(),$this->sqloptions());
+  }
   public function install()
   {
-    $this->sql = new SQLLib();
-    $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
+    $this->bootstrap();
     $output = "<!DOCTYPE html>\n<html>".
     "<head>".
     "<title>Contentifier Install</title>".
@@ -204,10 +210,13 @@ abstract class Contentifier
     "<h1>Contentifier Installation</h1>";
     if ($_POST["username"] && $_POST["password"])
     {
+      $isMysql = strstr($this->sqldsn(),"mysql")!==false;
+      $primary = $isMysql ? "int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT" : "INTEGER PRIMARY KEY AUTOINCREMENT";
+      $enum = $isMysql ? "enum('text','html','wiki') NOT NULL DEFAULT 'text'" : "text";
       $init = array(
-        "CREATE TABLE `menu` ( `id` int(11) NOT NULL AUTO_INCREMENT, `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL, PRIMARY KEY (`id`)) ENGINE=InnoDB;",
-        "CREATE TABLE `pages` ( `id` int(11) NOT NULL AUTO_INCREMENT, `slug` varchar(128) NOT NULL, `title` text NOT NULL, `content` text NOT NULL, `format` enum('text','html','wiki') NOT NULL DEFAULT 'text', PRIMARY KEY (`id`), UNIQUE KEY `slug` (`slug`)) ENGINE=InnoDB;",
-        "CREATE TABLE `users` ( `id` int(11) NOT NULL AUTO_INCREMENT, `username` varchar(64) NOT NULL, `password` varchar(128) NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `username` (`username`)) ENGINE=InnoDB;"
+        "CREATE TABLE `menu` ( `id` ".$primary.", `order` int(11) NOT NULL DEFAULT '0', `label` varchar(128) NOT NULL, `url` varchar(256) NOT NULL);",
+        "CREATE TABLE `pages` ( `id` ".$primary.", `slug` varchar(128) NOT NULL UNIQUE, `title` text NOT NULL, `content` text NOT NULL, `format` ".$enum.");",
+        "CREATE TABLE `users` ( `id` ".$primary.", `username` varchar(64) NOT NULL UNIQUE, `password` varchar(128) NOT NULL);"
       );
       foreach($init as $v) $this->sql->Query($v);
       $this->sql->insertRow("users",array(
@@ -237,8 +246,7 @@ abstract class Contentifier
   }
   public function run()
   {
-    $this->sql = new SQLLib();
-    $this->sql->Connect($this->sqlhost(),$this->sqluser(),$this->sqlpass(),$this->sqldb());
+    $this->bootstrap();
     $this->initurls();  
     $this->extractslug();
     if ($this->slug == "admin")

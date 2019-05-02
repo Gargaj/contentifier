@@ -19,68 +19,59 @@ class SQLLibException extends Exception
   }
 }
 
-class SQLLib
-{
-  public $link;
-  public $debugMode = false;
-  public $charset = "";
+class SQLLib {
+  public static $link;
+  public static $debugMode = false;
+  public static $charset = "";
   public $queries = array();
 
-  function Connect($SQL_HOST,$SQL_USERNAME,$SQL_PASSWORD,$SQL_DATABASE)
+  public function Connect($dsn, $username = null, $password = null, $options = null)
   {
-    $this->link = mysqli_connect($SQL_HOST,$SQL_USERNAME,$SQL_PASSWORD,$SQL_DATABASE);
-    if (mysqli_connect_errno($this->link))
-      die("Unable to connect MySQL: ".mysqli_connect_error());
-
-    $charsets = array("utf8mb4","utf8");
-    $this->charset = "";
-    foreach($charsets as $c)
+    try
     {
-      if (mysqli_set_charset($this->link,$c))
-      {
-        $this->charset = $c;
-        break;
-      }
+      $this->link = new PDO($dsn, $username, $password, $options);
     }
-    if (!$this->charset)
+    catch (PDOException $e) 
     {
-      die("Error loading any of the character sets:");
+      die("Unable to connect SQLite with PDO: ".$e->getMessage());
     }
+    $this->link->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);  
+    $this->link->setAttribute(PDO::ATTR_STRINGIFY_FETCHES, false);  
   }
 
-  function Disconnect()
+  public function Disconnect()
   {
-    mysqli_close($this->link);
+    $this->link = null;
   }
-
-  function Query($cmd)
+  
+  public function Query($cmd) 
   {
     global $SQLLIB_QUERIES;
 
     if ($this->debugMode)
     {
       $start = microtime(true);
-      $r = @mysqli_query($this->link,$cmd);
-      if(!$r) throw new SQLLibException(mysqli_error($this->link),0,$cmd);
+      $r = @$this->link->query($cmd);
+      if(!$r) throw new SQLLibException(implode("\n",$this->link->errorInfo()),0,$cmd);
       $end = microtime(true);
-      $this->queries[$cmd] = $end - $start;
+      $SQLLIB_QUERIES[$cmd] = $end - $start;
     }
     else
     {
-      $r = @mysqli_query($this->link,$cmd);
-      if(!$r) throw new SQLLibException(mysqli_error($this->link),0,$cmd);
-      $this->queries[] = "*";
+      $r = @$this->link->query($cmd);
+      if(!$r) throw new SQLLibException(implode("\n",$this->link->errorInfo()),0,$cmd);
+      $SQLLIB_QUERIES[] = "*";
     }
 
     return $r;
   }
 
-  function Fetch($r)
+  public function Fetch($r) 
   {
-    return mysqli_fetch_object($r);
+    return $r->fetchObject();
   }
 
-  function SelectRows($cmd)
+  public function SelectRows($cmd) 
   {
     $r = $this->Query($cmd);
     $a = Array();
@@ -88,16 +79,16 @@ class SQLLib
     return $a;
   }
 
-  function SelectRow($cmd)
+  public function SelectRow($cmd) 
   {
-    if (stristr($cmd,"select ")!==false && stristr($cmd," limit ")===false) // not exactly nice but it'll help
+    if (stristr($cmd,"select ")!==false && stristr($cmd," limit ")===false) // not exactly nice but i'll help
       $cmd .= " LIMIT 1";
     $r = $this->Query($cmd);
     $a = $this->Fetch($r);
     return $a;
   }
 
-  function InsertRow($table,$o,$onDup = array())
+  public function InsertRow($table,$o) 
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
@@ -108,76 +99,20 @@ class SQLLib
     $keys = Array();
     $values = Array();
     foreach($a as $k=>$v) {
-      $keys[]="`".mysqli_real_escape_string($this->link,$k)."`";
-      if ($v!==NULL) $values[]="'".mysqli_real_escape_string($this->link,$v)."'";
+      $keys[]=$this->Quote($k);
+      if ($v!==NULL) $values[]="'".$this->Quote($v)."'";
       else           $values[]="null";
     }
 
-    $cmd = sprintf("insert %s (%s) values (%s)",
+    $cmd = sprintf("insert into %s (%s) values (%s)",
       $table,implode(", ",$keys),implode(", ",$values));
-    if ($onDup)
-    {
-      $cmd .= " ON DUPLICATE KEY UPDATE ";
-      $set = array();
-      if ($onDup)
-      {
-        foreach($onDup as $k=>$v)
-        {
-          if ($v===NULL)
-          {
-            $set[] = sprintf("`%s`=null",mysqli_real_escape_string($this->link,$k));
-          }
-          else if ($k{0}=="@")
-          {
-            $set[] = sprintf("`%s`=%s",mysqli_real_escape_string($this->link,substr($k,1)),mysqli_real_escape_string($this->link,$v));
-          }
-          else
-          {
-            $set[] = sprintf("`%s`='%s'",mysqli_real_escape_string($this->link,$k),mysqli_real_escape_string($this->link,$v));
-          }
-        }
-      }
-      else
-      {
-        $key = reset(array_keys($o));
-        $set[] = $key . "=" . $key;
-      }
-      $cmd .= implode(", ",$set);
-    }
 
     $r = $this->Query($cmd);
 
-    return mysqli_insert_id($this->link);
+    return $this->link->lastInsertId();
   }
 
-  function InsertMultiRow($table,$arr)
-  {
-    global $SQLLIB_ARRAYS_CLEANED;
-    if (!$SQLLIB_ARRAYS_CLEANED)
-      trigger_error("Arrays not cleaned before InsertMultiRow!",E_USER_ERROR);
-
-    $keys = Array();
-    $allValues = Array();
-    foreach($arr as $o)
-    {
-      if (is_object($o)) $a = get_object_vars($o);
-      else if (is_array($o)) $a = $o;
-      $keys = Array();
-      $values = Array();
-      foreach($a as $k=>$v) {
-        $keys[]="`".mysqli_real_escape_string($this->link,$k)."`";
-        if ($v!==NULL) $values[]="'".mysqli_real_escape_string($this->link,$v)."'";
-        else           $values[]="null";
-      }
-      $allValues[] = "(".implode(", ",$values).")";
-    }
-
-    $cmd = sprintf("insert %s (%s) values %s",
-      $table,implode(", ",$keys),implode(", ",$allValues));
-    $r = $this->Query($cmd);
-  }
-
-  function UpdateRow($table,$o,$where)
+  public function UpdateRow($table,$o,$where) 
   {
     global $SQLLIB_ARRAYS_CLEANED;
     if (!$SQLLIB_ARRAYS_CLEANED)
@@ -189,11 +124,11 @@ class SQLLib
     foreach($a as $k=>$v) {
       if ($v===NULL)
       {
-        $set[] = sprintf("`%s`=null",mysqli_real_escape_string($this->link,$k));
+        $set[] = sprintf("%s=null",$this->Quote($k));
       }
       else
       {
-        $set[] = sprintf("`%s`='%s'",mysqli_real_escape_string($this->link,$k),mysqli_real_escape_string($this->link,$v));
+        $set[] = sprintf("%s='%s'",$this->Quote($k),$this->Quote($v));
       }
     }
     $cmd = sprintf("update %s set %s where %s",
@@ -203,28 +138,27 @@ class SQLLib
 
   /*
   UpdateRowMulti allows batched updates on multiple rows at once.
-
+  
   Syntax:
   $tuples = array(
     array( "keyColumn" => 1, "col1" => "abc", "col2" => "def" ),
     array( "keyColumn" => 2, "col1" => "ghi", "col2" => "jkl" ),
   );
   $key = "keyColumn";
-
+  
   NOTE: the first tuple defines keys. If your tuples are uneven, you're on your own.
   */
-  function UpdateRowMulti( $table, $key, $tuples )
+  public function UpdateRowMulti( $table, $key, $tuples )
   {
     if (!count($tuples))
       return;
     if (!is_array($tuples[0]))
       throw new Exception("Has to be array!");
-
+  
     $fields = array_keys( $tuples[0] );
-
+  
     $sql = "UPDATE ".$table;
     $keys = array();
-    $cond = "";
     foreach($fields as $field)
     {
       if ($field == $key) continue;
@@ -235,43 +169,43 @@ class SQLLib
     foreach($tuples as $tuple)
       $keys[] = $tuple[$key];
     $sql .= " WHERE `".$key."` IN (".implode(",",$keys).")";
-
+  
     $this->Query($sql);
   }
 
-  function UpdateOrInsertRow($table,$o,$where)
+  public function UpdateOrInsertRow($table,$o,$where) 
   {
     if ($this->SelectRow(sprintf("SELECT * FROM %s WHERE %s",$table,$where)))
       return $this->UpdateRow($table,$o,$where);
     else
       return $this->InsertRow($table,$o);
   }
-
-  function StartTransaction()
+  
+  public function StartTransaction() 
   {
-    mysqli_autocommit($this->link, FALSE);
   }
-  function FinishTransaction()
+  public function FinishTransaction() 
   {
-    mysqli_commit($this->link);
-    mysqli_autocommit($this->link, TRUE);
   }
-  function CancelTransaction()
+  public function CancelTransaction() 
   {
-    mysqli_rollback($this->link);
-    mysqli_autocommit($this->link, TRUE);
   }
-  function Escape()
+  public function Quote($string)
+  {
+    return substr($this->link->quote($string),1,-1);
+  }
+  public function Escape($string)
   {
     $args = func_get_args();
-    for ($key = 1; $key < count($args); $key++) {
-      $args[$key] = mysqli_real_escape_string($this->link, $args[$key]);
+    for ($key = 1; $key < count($args); $key++) 
+    {
+      $args[$key] = $this->Quote($args[$key]);
     }
     return call_user_func_array("sprintf", $args);
   }
 }
 
-class SQLTrans
+class SQLTrans 
 {
   var $rollback;
   function __construct() {
@@ -289,7 +223,7 @@ class SQLTrans
   }
 }
 
-class SQLSelect
+class SQLSelect 
 {
   var $fields;
   var $tables;
@@ -311,15 +245,15 @@ class SQLSelect
     $this->limit = NULL;
     $this->offset = NULL;
   }
-  function AddTable($s)
+  function AddTable($s) 
   {
     $this->tables[] = $s;
   }
-  function AddField($s)
+  function AddField($s) 
   {
     $this->fields[] = $s;
   }
-  function AddJoin($type,$table,$condition)
+  function AddJoin($type,$table,$condition) 
   {
     $o = new stdClass();
     $o->type = $type;
@@ -327,23 +261,23 @@ class SQLSelect
     $o->condition = $condition;
     $this->joins[] = $o;
   }
-  function AddWhere($s)
+  function AddWhere($s) 
   {
     $this->conditions[] = "(".$s.")";
   }
-  function AddOrder($s)
+  function AddOrder($s) 
   {
     $this->orders[] = $s;
   }
-  function AddGroup($s)
+  function AddGroup($s) 
   {
     $this->groups[] = $s;
   }
-  function SetLimit( $limit, $offset = NULL )
+  function SetLimit( $limit, $offset = NULL ) 
   {
-    $this->limit = $limit;
+    $this->limit = (int)$limit;
     if ($offset !== NULL)
-      $this->offset = $offset;
+      $this->offset = (int)$offset;
   }
   function GetQuery()
   {
@@ -380,8 +314,19 @@ class SQLSelect
   }
 }
 
+function sprintf_esc()
+{
+  $args = func_get_args();
+  reset($args);
+  next($args);
+  while (list($key, $value) = each($args))
+    $args[$key] = $this->Quote( $args[$key] );
+
+  return call_user_func_array("sprintf", $args);
+}
+
 function nop($s) { return $s; }
-function clearArray($a)
+function clearArray($a) 
 {
   $ar = array();
   $qcb = get_magic_quotes_gpc() ? "stripslashes" : "nop";

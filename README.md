@@ -5,6 +5,11 @@ of http://github.com/vrana/adminer and the featureset of Wordpress. Currently un
 ![admin screenshot](https://user-images.githubusercontent.com/1702533/27014035-87b2df36-4ef0-11e7-89fb-af5b6caf9bd5.png)
 
 ## How to use
+
+### Requirements
+Contentifier uses PDO, so you'll need at least PHP5; currently it's been tested with MySQL 5 and SQLite 3.
+
+### Installation
 Get `contentifier.php` or `contentifier.min.php`. Place it next to an `index.php` that looks like this:
 ``` php
 <?php
@@ -13,7 +18,7 @@ include_once("contentifier.php");
 class MyContentifier extends Contentifier
 {
   // if you don't specify anything else, it'll try to connect
-  // to localhost using "contentifier" as db and user name
+  // to a mysql server on localhost using "contentifier" as db and user name
   public function sqlpass() { return "your-sql-password-here"; }
 }
 
