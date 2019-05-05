@@ -621,7 +621,7 @@ abstract class ContentifierPagePlugin extends ContentifierPlugin
 abstract class ContentifierShortCodePlugin extends ContentifierPlugin
 {
   abstract public function shortcode();
-  abstract public function content();
+  abstract public function content($params);
 }
 abstract class Contentifier
 {
@@ -728,16 +728,18 @@ abstract class Contentifier
     if ($row)
     {
       $content = $row->content;
-      switch($row->format)
-      {
-        case "text": $content = nl2br($this->escape($content)); break;
-      }
       foreach($this->plugins as $plugin)
       {
         if (is_a($plugin,"ContentifierShortCodePlugin"))
         {
-          $content = str_replace("{{".$plugin->shortcode()."}}",$plugin->content(),$content);
+          $content = preg_replace_callback("/\{\{".$plugin->shortcode()."\|?(.*)\}\}/",function($matches)use($plugin){
+            return $plugin->content(explode("|",$matches[1]));
+          },$content);
         }
+      }
+      switch($row->format)
+      {
+        case "text": $content = nl2br($this->escape($content)); break;
       }
       return $content;
     }
