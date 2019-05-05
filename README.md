@@ -52,11 +52,11 @@ RewriteRule . index.php
   public function rewriteenabled() { return true; }
 ```
 
-### Examples of templates and plugins
+### Templating
+By default it includes `template.html` and replaces `{%MENU%}` and `{%CONTENT%}` with the respective data.
+
+### Examples of more complex templates and plugins
 Please refer to https://github.com/Gargaj/contentifier/wiki/Examples
 
 ## How to build
 Use `rake.php` to compile the contents of the `contentifier` folder into one file.
-
-## Templating
-By default it includes `template.html` and replaces `{%MENU%}` and `{%CONTENT%}` with the respective data.
