@@ -99,7 +99,7 @@ class SQLLib {
     $keys = Array();
     $values = Array();
     foreach($a as $k=>$v) {
-      $keys[]=$this->Quote($k);
+      $keys[]="`".$this->Quote($k)."`";
       if ($v!==NULL) $values[]="'".$this->Quote($v)."'";
       else           $values[]="null";
     }
@@ -124,11 +124,11 @@ class SQLLib {
     foreach($a as $k=>$v) {
       if ($v===NULL)
       {
-        $set[] = sprintf("%s=null",$this->Quote($k));
+        $set[] = sprintf("`%s`=null",$this->Quote($k));
       }
       else
       {
-        $set[] = sprintf("%s='%s'",$this->Quote($k),$this->Quote($v));
+        $set[] = sprintf("`%s`='%s'",$this->Quote($k),$this->Quote($v));
       }
     }
     $cmd = sprintf("update %s set %s where %s",

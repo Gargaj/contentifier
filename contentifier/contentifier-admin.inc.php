@@ -101,6 +101,7 @@ trait ContentifierAdmin
               $a = array(
                 "label"=>$_POST["label"],
                 "url"=>$_POST["url"],
+                "order"=>(int)$_POST["order"],
               );
               if ($_POST["menuID"])
               {
@@ -122,6 +123,8 @@ trait ContentifierAdmin
               $output .= "<input name='label' value='".$this->escape($menu->label)."' required='yes'/>";
               $output .= "<label>Menu item URL: (absolute or relative to site root)</label>";
               $output .= "<input name='url' value='".$this->escape($menu->url)."' required='yes'/>";
+              $output .= "<label>Menu item order weight:</label>";
+              $output .= "<input name='order' type='number' value='".$this->escape($menu->order)."' required='yes'/>";
               if ($_GET["menuID"])
               {
                 $output .= "<input type='hidden' name='menuID' value='".$this->escape($_GET["menuID"])."'/>";
@@ -141,10 +144,11 @@ trait ContentifierAdmin
                 $output .= "<td>".$this->escape($menu->id)."</td>";
                 $output .= "<td><a href='".$this->escape($this->buildurl("admin",array("section"=>"menu","menuID"=>$menu->id)))."'>".$this->escape($menu->label)."</a></td>";
                 $output .= "<td>".$this->escape($menu->url)."</td>";
+                $output .= "<td>".$this->escape($menu->order)."</td>";
                 $output .= "</tr>";
               }
               $output .= "<tr>";
-              $output .= "<td colspan='3'><a href='".$this->escape($this->buildurl("admin",array("section"=>"menu","add"=>"new")))."'>Add new menu item</a></td>";
+              $output .= "<td colspan='4'><a href='".$this->escape($this->buildurl("admin",array("section"=>"menu","add"=>"new")))."'>Add new menu item</a></td>";
               $output .= "</tr>";
               $output .= "</table>";
             }
