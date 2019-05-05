@@ -51,6 +51,10 @@ RewriteRule . index.php
 ``` php
   public function rewriteenabled() { return true; }
 ```
+
+### Examples of templates and plugins
+Please refer to https://github.com/Gargaj/contentifier/wiki/Examples
+
 ## How to build
 Use `rake.php` to compile the contents of the `contentifier` folder into one file.
 
