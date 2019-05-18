@@ -1,6 +1,8 @@
 # Contentifier
 Single file website / content engine aimed to be a combination of the compactness
-of http://github.com/vrana/adminer and the featureset of Wordpress. Currently under 30 kilobytes.
+of http://github.com/vrana/adminer and the featureset of Wordpress.
+
+![GitHub file size in bytes](https://img.shields.io/github/size/Gargaj/contentifier/contentifier.min.php.svg)
 
 ![admin screenshot](https://user-images.githubusercontent.com/1702533/27014035-87b2df36-4ef0-11e7-89fb-af5b6caf9bd5.png)
 
