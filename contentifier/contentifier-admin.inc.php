@@ -1,6 +1,62 @@
 <?
 trait ContentifierAdmin
 {
+  function thumbnail_cover($srcfile, $dstfile, $limitx=128, $limity=128, $outFormat=IMAGETYPE_PNG)
+  {
+    list($x,$y,$type,$attr) = getimagesize($srcfile);
+  
+    $aspThmb = $limitx / (float)$limity;
+    $aspOrig = $x / (float)$y;
+  
+    if (($aspThmb - 1) * ($aspOrig - 1) <= 0)
+    {
+      // aspects/orientation are different
+      if ($aspThmb > $aspOrig)
+      {
+        $cropx = $x;
+        $cropy = floor($x * $limity / $limitx);
+      }
+      else
+      {
+        $cropx = floor($y * $limitx / $limity);
+        $cropy = $y;
+      }
+    }
+    else
+    {
+      // aspects match
+      if ($aspThmb < $aspOrig)
+      {
+        $cropx = floor($y * $limitx / $limity);
+        $cropy = $y;
+      }
+      else
+      {
+        $cropx = $x;
+        $cropy = floor($x * $limity / $limitx);
+      }
+    }
+  
+    $openfunc = array(
+      1 =>"imagecreatefromgif",
+      2 =>"imagecreatefromjpeg",
+      3 =>"imagecreatefrompng",
+    );
+  
+    $src = $openfunc[$type]($srcfile);
+    $dst = imagecreatetruecolor($limitx, $limity);
+  
+    $result = imagecopyresampled($dst, $src, 0, 0, ($x - $cropx) / 2, ($y - $cropy) / 2, $limitx, $limity, $cropx, $cropy);
+    
+    switch($outFormat)
+    {
+      case IMAGETYPE_GIF: imagegif($dst, $dstfile); break;
+      case IMAGETYPE_JPEG: imagejpeg($dst, $dstfile); break;
+      case IMAGETYPE_PNG: imagepng($dst, $dstfile); break;
+    }
+    imagedestroy($dst);
+    imagedestroy($src);
+  }
   function isloggedinasadmin()
   {
     @session_start();
@@ -54,6 +110,9 @@ trait ContentifierAdmin
     "label.radio{display:inline-block;margin-right:10px;vertical-align:sub;color:#444;font-size:80%;}".
     "label.radio input{display:inline;width:auto;}".
     "#loginform{width:300px;margin:30px auto;}".
+    "#medialist{list-style:none;}".
+    "#medialist li{padding:5px 0px;display:inline-block;width:160px;height:200px;font-size:12px;vertical-align:top;}".
+    "#medialist li a{display: block;}".
     "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
     "</style>".
     "</head>".
@@ -70,6 +129,7 @@ trait ContentifierAdmin
       "<nav><ul>".
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"pages")))."'>Pages</a></li>".
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"menu")))."'>Menu</a></li>".
+      "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"media")))."'>Media</a></li>".
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"users")))."'>Users</a></li>";
       foreach($this->plugins as $plugin)
       {
@@ -152,6 +212,48 @@ trait ContentifierAdmin
               $output .= "</tr>";
               $output .= "</table>";
             }
+          }
+          break;
+        case "media":
+          {
+            $defSize = 150;
+            if (is_uploaded_file($_FILES["newMediaFile"]["tmp_name"]))
+            {
+              @mkdir($this->mediadir());
+              $baseName = $this->sanitize($_FILES["newMediaFile"]["name"]);
+              $newFile = $this->mediadir()."/".$baseName;
+              move_uploaded_file($_FILES["newMediaFile"]["tmp_name"],$newFile);
+              @mkdir($this->thumbdir($defSize));
+              $this->thumbnail_cover($newFile,$this->thumb($baseName,$defSize),$defSize,$defSize,IMAGETYPE_JPEG);
+            }
+            $files = glob($this->mediadir() . "/*");
+            $output .= "<h2>Media gallery</h2>";
+            $output .= "<ul id='medialist'>";
+            $n=0;
+            $types = array( 1 =>"GIF", 2 =>"JPEG", 3 =>"PNG" );
+            foreach($files as $file)
+            {
+              if (basename($file)=="." || basename($file)==".." || is_dir($file)) continue;
+              $output .= "<li>";
+              $output .= "<a href='".$this->rooturl().$file."'><img src='".$this->rooturl().$this->thumb($file,$defSize)."'/></a> ";
+              $output .= "<a href='".$this->rooturl().$file."'><b>".basename($file)."</b></a>";              
+              list($x,$y,$type,$attr) = @getimagesize($file);
+              $output .= " (";
+              if ($x&&$y)
+              {
+                $output .= sprintf("%d * %d %s, ",$x,$y,$types[$type]);
+              }
+              $output .= sprintf("%d bytes)",filesize($file));
+              $output .= "</li>";
+              $n++;
+            }
+            if (!$n) $output .= "<li>No files yet.</li>";
+            $output .= "</ul>";
+            $output .= "<h3>Upload new file</h3>";
+            $output .= "<form method='post' enctype='multipart/form-data'>";
+            $output .= "<input type='file' name='newMediaFile' required='yes'/>";
+            $output .= "<input type='submit' name='uploadMedia' value='Upload'/>";
+            $output .= "</form>";
           }
           break;
         case "users":

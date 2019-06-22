@@ -28,6 +28,10 @@ abstract class Contentifier
   public function sqluser() { return "contentifier"; }
   abstract public function sqlpass();
   public function sqloptions() { return array(); }
+  
+  public function mediadir() { return "media"; }
+  public function thumbdir($res) { return $this->mediadir()."/thumb".(int)$res."px"; }
+  public function thumb($fn,$res) { return $this->mediadir()."/thumb".(int)$res."px/".basename($fn); }
 
   public function templatefile() { return "template.html"; }
   public function rewriteenabled() { return false; }
@@ -40,6 +44,10 @@ abstract class Contentifier
   function escape($s)
   {
     return htmlspecialchars($s,ENT_QUOTES);
+  }
+  function sanitize($s)
+  {
+    return preg_replace("/([^a-zA-Z0-9\.]+)/im","_",$s);
   }
   function buildurl($slug,$params=array())
   {
