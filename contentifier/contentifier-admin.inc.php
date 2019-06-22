@@ -114,6 +114,7 @@ trait ContentifierAdmin
     "#medialist li{padding:5px;display:inline-block;width:160px;height:200px;font-size:12px;vertical-align:top;overflow:hidden}".
     "#medialist li a{display: block;}".
     "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
+    "@media screen and (max-width: 800px){nav, #content{display:block;}nav,#content{width:92vw}nav ul li{display:inline-block}nav ul li a{margin:3px}".
     "</style>".
     "</head>".
     "<body>".
