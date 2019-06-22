@@ -111,7 +111,7 @@ trait ContentifierAdmin
     "label.radio input{display:inline;width:auto;}".
     "#loginform{width:300px;margin:30px auto;}".
     "#medialist{list-style:none;}".
-    "#medialist li{padding:5px 0px;display:inline-block;width:160px;height:200px;font-size:12px;vertical-align:top;}".
+    "#medialist li{padding:5px;display:inline-block;width:160px;height:200px;font-size:12px;vertical-align:top;overflow:hidden}".
     "#medialist li a{display: block;}".
     "footer, footer a{color:#999;margin:5px;font-size:10px;text-align:right;}".
     "</style>".
@@ -225,6 +225,7 @@ trait ContentifierAdmin
               move_uploaded_file($_FILES["newMediaFile"]["tmp_name"],$newFile);
               @mkdir($this->thumbdir($defSize));
               $this->thumbnail_cover($newFile,$this->thumb($baseName,$defSize),$defSize,$defSize,IMAGETYPE_JPEG);
+              $this->redirect( $this->buildurl("admin",array("section"=>"media")) );
             }
             $files = glob($this->mediadir() . "/*");
             $output .= "<h2>Media gallery</h2>";
