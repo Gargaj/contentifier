@@ -788,7 +788,7 @@ abstract class Contentifier
     }
     else
     {
-      $this->slug = $_GET["page"];
+      $this->slug = @$_GET["page"];
     }
     if (!$this->slug)
     {

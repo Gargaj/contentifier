@@ -4,10 +4,10 @@ trait ContentifierAdmin
   function thumbnail_cover($srcfile, $dstfile, $limitx=128, $limity=128, $outFormat=IMAGETYPE_PNG)
   {
     list($x,$y,$type,$attr) = getimagesize($srcfile);
-  
+
     $aspThmb = $limitx / (float)$limity;
     $aspOrig = $x / (float)$y;
-  
+
     if (($aspThmb - 1) * ($aspOrig - 1) <= 0)
     {
       // aspects/orientation are different
@@ -36,18 +36,18 @@ trait ContentifierAdmin
         $cropy = floor($x * $limity / $limitx);
       }
     }
-  
+
     $openfunc = array(
       1 =>"imagecreatefromgif",
       2 =>"imagecreatefromjpeg",
       3 =>"imagecreatefrompng",
     );
-  
+
     $src = $openfunc[$type]($srcfile);
     $dst = imagecreatetruecolor($limitx, $limity);
-  
+
     $result = imagecopyresampled($dst, $src, 0, 0, ($x - $cropx) / 2, ($y - $cropy) / 2, $limitx, $limity, $cropx, $cropy);
-    
+
     switch($outFormat)
     {
       case IMAGETYPE_GIF: imagegif($dst, $dstfile); break;
@@ -239,7 +239,7 @@ trait ContentifierAdmin
               if (basename($file)=="." || basename($file)==".." || is_dir($file)) continue;
               $output .= "<li>";
               $output .= "<a href='".$this->rooturl().$file."'><img src='".$this->rooturl().$this->thumb($file,$defSize)."'/></a> ";
-              $output .= "<a href='".$this->rooturl().$file."'><b>".basename($file)."</b></a>";              
+              $output .= "<a href='".$this->rooturl().$file."'><b>".basename($file)."</b></a>";
               list($x,$y,$type,$attr) = @getimagesize($file);
               $output .= " (";
               if ($x&&$y)

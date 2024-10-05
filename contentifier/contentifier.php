@@ -28,7 +28,7 @@ abstract class Contentifier
   public function sqluser() { return "contentifier"; }
   abstract public function sqlpass();
   public function sqloptions() { return array(); }
-  
+
   public function mediadir() { return "media"; }
   public function thumbdir($res) { return $this->mediadir()."/thumb".(int)$res."px"; }
   public function thumb($fn,$res) { return $this->mediadir()."/thumb".(int)$res."px/".basename($fn); }
@@ -45,9 +45,9 @@ abstract class Contentifier
   private $url;
   private $rootRelativeURL;
   private $rootRelativePath;
-  
-  use ContentifierAdmin;  
-  
+
+  use ContentifierAdmin;
+
   function escape($s)
   {
     return htmlspecialchars($s,ENT_QUOTES);
@@ -77,7 +77,7 @@ abstract class Contentifier
   function initurls()
   {
     $this->url = ($_SERVER["HTTPS"]=="on"?"https":"http").":/"."/".$_SERVER["HTTP_HOST"].$_SERVER["REQUEST_URI"];
-    
+
     $dir = dirname($_SERVER["PHP_SELF"]);
 
     $this->rootRelativeURL = $_SERVER['REQUEST_URI'];
@@ -97,7 +97,7 @@ abstract class Contentifier
     }
     else
     {
-      $this->slug = $_GET["page"];
+      $this->slug = @$_GET["page"];
     }
     if (!$this->slug)
     {
@@ -263,7 +263,7 @@ abstract class Contentifier
   public function run()
   {
     $this->bootstrap();
-    $this->initurls();  
+    $this->initurls();
     $this->extractslug();
     if ($this->slug == "admin")
     {
