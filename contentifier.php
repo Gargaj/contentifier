@@ -348,21 +348,22 @@ trait ContentifierAdmin
   function isloggedinasadmin()
   {
     @session_start();
-    if ($_POST["login"] && $_SESSION["contentifier_token"] == $_POST["token"])
+    if (@$_POST["login"] && @$_SESSION["contentifier_token"] == @$_POST["token"])
     {
       $user = $this->sql->selectRow($this->sql->escape("select * from users where username='%s'",$_POST["username"]));
-      if (password_verify($_POST["password"],$user->password))
+      if ($user && password_verify($_POST["password"],$user->password))
       {
         $_SESSION["contentifier_userID"] = $user->id;
         return true;
       }
     }
-    return $this->sql->selectRow($this->sql->escape("select * from users where id='%d'",$_SESSION["contentifier_userID"]));
+    return $this->sql->selectRow($this->sql->escape("select * from users where id='%d'",(int)@$_SESSION["contentifier_userID"]));
   }
   function renderadmin_loginform()
   {
     $token = rand(1,999999);
     $_SESSION["contentifier_token"] = $token;
+    $output = "";
     $output .= "<form method='post'>";
     $output .= "<label>Username:</label>";
     $output .= "<input name='username' required='yes'/>";
@@ -430,7 +431,7 @@ trait ContentifierAdmin
       $output.=
       "<li><a href='".$this->escape($this->buildurl("admin",array("section"=>"logout")))."'>Log out</a></li>".
       "</ul></nav><div id='content'>";
-      switch($_GET["section"])
+      switch(@$_GET["section"])
       {
         case "logout":
           {
@@ -440,19 +441,19 @@ trait ContentifierAdmin
           break;
         case "menu":
           {
-            if ($_POST["deleteMenu"])
+            if (@$_POST["deleteMenu"])
             {
               $this->sql->query($this->sql->escape("delete from menu where id=%d",$_POST["menuID"]));
               $this->redirect( $this->buildurl("admin",array("section"=>"menu")) );
             }
-            else if ($_POST["submitMenu"])
+            else if (@$_POST["submitMenu"])
             {
               $a = array(
                 "label"=>$_POST["label"],
                 "url"=>$_POST["url"],
                 "order"=>(int)$_POST["order"],
               );
-              if ($_POST["menuID"])
+              if (@$_POST["menuID"])
               {
                 $this->sql->updateRow("menu",$a,$this->sql->escape("id=%d",$_POST["menuID"]));
                 $this->redirect( $this->buildurl("admin",array("section"=>"menu","menuID"=>$_POST["userID"])) );
@@ -463,7 +464,7 @@ trait ContentifierAdmin
                 $this->redirect( $this->buildurl("admin",array("section"=>"menu","menuID"=>$id)) );
               }
             }
-            if ($_GET["menuID"] || $_GET["add"]=="new")
+            if (@$_GET["menuID"] || @$_GET["add"]=="new")
             {
               $menu = $this->sql->selectRow($this->sql->escape("select * from menu where id='%d'",$_GET["menuID"]));
               $output .= "<h2>Menu item: ".$this->escape($menu->label)."</h2>";
@@ -474,7 +475,7 @@ trait ContentifierAdmin
               $output .= "<input name='url' value='".$this->escape($menu->url)."' required='yes'/>";
               $output .= "<label>Menu item order weight:</label>";
               $output .= "<input name='order' type='number' value='".$this->escape($menu->order)."' required='yes'/>";
-              if ($_GET["menuID"])
+              if (@$_GET["menuID"])
               {
                 $output .= "<input type='hidden' name='menuID' value='".$this->escape($_GET["menuID"])."'/>";
               }
@@ -506,7 +507,7 @@ trait ContentifierAdmin
         case "media":
           {
             $defSize = 150;
-            if (is_uploaded_file($_FILES["newMediaFile"]["tmp_name"]))
+            if (@$_FILES["newMediaFile"]["tmp_name"] && is_uploaded_file($_FILES["newMediaFile"]["tmp_name"]))
             {
               @mkdir($this->mediadir());
               $baseName = $this->sanitize($_FILES["newMediaFile"]["name"]);
@@ -548,12 +549,12 @@ trait ContentifierAdmin
           break;
         case "users":
           {
-            if ($_POST["deleteUser"])
+            if (@$_POST["deleteUser"])
             {
               $this->sql->query($this->sql->escape("delete from users where id=%d",$_POST["userID"]));
               $this->redirect( $this->buildurl("admin",array("section"=>"users")) );
             }
-            else if ($_POST["submitUser"])
+            else if (@$_POST["submitUser"])
             {
               $a = array(
                 "username"=>$_POST["username"],
@@ -574,7 +575,7 @@ trait ContentifierAdmin
                 $this->redirect( $this->buildurl("admin",array("section"=>"users","userID"=>$id)) );
               }
             }
-            if ($_GET["userID"] || $_GET["add"]=="new")
+            if (@$_GET["userID"] || @$_GET["add"]=="new")
             {
               $user = $this->sql->selectRow($this->sql->escape("select * from users where id='%d'",$_GET["userID"]));
               $output .= "<h2>User: ".$this->escape($user->username)."</h2>";
@@ -619,7 +620,7 @@ trait ContentifierAdmin
             $found = false;
             foreach($this->plugins as $plugin)
             {
-              if ($_GET["section"] == $plugin->id())
+              if (@$_GET["section"] == $plugin->id())
               {
                 $output .= $plugin->admin();
                 $found = true;
@@ -627,12 +628,12 @@ trait ContentifierAdmin
             }
             if (!$found)
             {
-              if ($_POST["deletePage"])
+              if (@$_POST["deletePage"])
               {
                 $this->sql->query($this->sql->escape("delete from pages where id=%d",$_POST["pageID"]));
                 $this->redirect( $this->buildurl("admin",array("section"=>"pages")) );
               }
-              else if ($_POST["submitPage"])
+              else if (@$_POST["submitPage"])
               {
                 $a = array(
                   "title"=>$_POST["title"],
@@ -651,7 +652,7 @@ trait ContentifierAdmin
                   $this->redirect( $this->buildurl("admin",array("section"=>"pages","pageID"=>$id)) );
                 }
               }
-              if ($_GET["pageID"] || $_GET["add"]=="new")
+              if (@$_GET["pageID"] || @$_GET["add"]=="new")
               {
                 $page = $this->sql->selectRow($this->sql->escape("select * from pages where id='%d'",$_GET["pageID"]));
                 $output .= "<form method='post'>";
@@ -667,7 +668,7 @@ trait ContentifierAdmin
                 $output .= "<label class='radio'><input type='radio' name='format' value='text'".(($page->format=="text"||!$page->format)?"checked='checked'":"")."> Plain text</label>";
                 $output .= "<label class='radio'><input type='radio' name='format' value='HTML'".($page->format=="html"?"checked='checked'":"")."> HTML</label>";
                 $output .= "</div>";
-                if ($_GET["pageID"])
+                if (@$_GET["pageID"])
                 {
                   $output .= "<input type='hidden' name='pageID' value='".$this->escape($_GET["pageID"])."'/>";
                 }
