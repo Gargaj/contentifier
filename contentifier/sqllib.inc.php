@@ -1,7 +1,4 @@
 <?php
-global $SQLLIB_ARRAYS_CLEANED;
-$SQLLIB_ARRAYS_CLEANED = false;
-
 class SQLLibException extends Exception 
 { 
   public function __construct($message = null, $code = 0, $query = "")
@@ -19,11 +16,11 @@ class SQLLibException extends Exception
   }
 }
 
-class SQLLib {
-  public static $link;
-  public static $debugMode = false;
-  public static $charset = "";
-  public $queries = array();
+class SQLLib 
+{
+  public $debugMode = false;
+
+  protected $link;
 
   public function Connect($dsn, $username = null, $password = null, $options = null)
   {
@@ -90,10 +87,6 @@ class SQLLib {
 
   public function InsertRow($table,$o) 
   {
-    global $SQLLIB_ARRAYS_CLEANED;
-    if (!$SQLLIB_ARRAYS_CLEANED)
-      trigger_error("Arrays not cleaned before InsertRow!",E_USER_ERROR);
-
     if (is_object($o)) $a = get_object_vars($o);
     else if (is_array($o)) $a = $o;
     $keys = Array();
@@ -114,10 +107,6 @@ class SQLLib {
 
   public function UpdateRow($table,$o,$where) 
   {
-    global $SQLLIB_ARRAYS_CLEANED;
-    if (!$SQLLIB_ARRAYS_CLEANED)
-      trigger_error("Arrays not cleaned before UpdateRow!",E_USER_ERROR);
-
     if (is_object($o)) $a = get_object_vars($o);
     else if (is_array($o)) $a = $o;
     $set = Array();
@@ -338,8 +327,10 @@ function clearArray($a)
   return $ar;
 }
 
-$_POST = clearArray($_POST);
-$_GET = clearArray($_GET);
-$_REQUEST = clearArray($_REQUEST);
-$SQLLIB_ARRAYS_CLEANED = true;
+if (function_exists("get_magic_quotes_gpc") && version_compare(phpversion(), '7.0.0', '<'))
+{
+  $_POST = clearArray($_POST);
+  $_GET = clearArray($_GET);
+  $_REQUEST = clearArray($_REQUEST);
+}
 ?>

@@ -1,6 +1,4 @@
 <?php 
-global $SQLLIB_ARRAYS_CLEANED;
-$SQLLIB_ARRAYS_CLEANED = false;
 class SQLLibException extends Exception
 {
   public function __construct($message = null, $code = 0, $query = "")
@@ -17,11 +15,10 @@ class SQLLibException extends Exception
     return $e;
   }
 }
-class SQLLib {
-  public static $link;
-  public static $debugMode = false;
-  public static $charset = "";
-  public $queries = array();
+class SQLLib
+{
+  public $debugMode = false;
+  protected $link;
   public function Connect($dsn, $username = null, $password = null, $options = null)
   {
     try
@@ -79,9 +76,6 @@ class SQLLib {
   }
   public function InsertRow($table,$o)
   {
-    global $SQLLIB_ARRAYS_CLEANED;
-    if (!$SQLLIB_ARRAYS_CLEANED)
-      trigger_error("Arrays not cleaned before InsertRow!",E_USER_ERROR);
     if (is_object($o)) $a = get_object_vars($o);
     else if (is_array($o)) $a = $o;
     $keys = Array();
@@ -98,9 +92,6 @@ class SQLLib {
   }
   public function UpdateRow($table,$o,$where)
   {
-    global $SQLLIB_ARRAYS_CLEANED;
-    if (!$SQLLIB_ARRAYS_CLEANED)
-      trigger_error("Arrays not cleaned before UpdateRow!",E_USER_ERROR);
     if (is_object($o)) $a = get_object_vars($o);
     else if (is_array($o)) $a = $o;
     $set = Array();
@@ -296,10 +287,12 @@ function clearArray($a)
       $ar[$k] = $qcb($v);
   return $ar;
 }
-$_POST = clearArray($_POST);
-$_GET = clearArray($_GET);
-$_REQUEST = clearArray($_REQUEST);
-$SQLLIB_ARRAYS_CLEANED = true;
+if (function_exists("get_magic_quotes_gpc") && version_compare(phpversion(), '7.0.0', '<'))
+{
+  $_POST = clearArray($_POST);
+  $_GET = clearArray($_GET);
+  $_REQUEST = clearArray($_REQUEST);
+}
 trait ContentifierAdmin
 {
   function thumbnail_cover($srcfile, $dstfile, $limitx=128, $limity=128, $outFormat=IMAGETYPE_PNG)
@@ -740,6 +733,12 @@ abstract class Contentifier
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
   private $plugins = array();
+  private $sql;
+  private $rootURL;
+  private $slug;
+  private $url;
+  private $rootRelativeURL;
+  private $rootRelativePath;
   use ContentifierAdmin;
   function escape($s)
   {
@@ -916,7 +915,7 @@ abstract class Contentifier
     "</head>".
     "<body>".
     "<h1>Contentifier Installation</h1>";
-    if ($_POST["username"] && $_POST["password"])
+    if (@$_POST["username"] && @$_POST["password"])
     {
       $isMysql = strstr($this->sqldsn(),"mysql")!==false;
       $primary = $isMysql ? "int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT" : "INTEGER PRIMARY KEY AUTOINCREMENT";
@@ -943,7 +942,6 @@ abstract class Contentifier
       "<input name='username' required='yes'/>".
       "<label>Password:</label>".
       "<input name='password' required='yes' type='password'/>".
-      "<input type='hidden' name='token' value='".$this->escape($token)."'/>".
       "<input type='submit' name='createUser' value='Create'/>".
       "</form>";
     }

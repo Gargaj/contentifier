@@ -1,4 +1,4 @@
-<?
+<?php
 include_once("sqllib.inc.php");
 include_once("contentifier-admin.inc.php");
 
@@ -37,7 +37,14 @@ abstract class Contentifier
   public function rewriteenabled() { return false; }
   public function rooturl() { return $this->rootURL; }
   public function slug() { return $this->slug; }
+
   private $plugins = array();
+  private $sql;
+  private $rootURL;
+  private $slug;
+  private $url;
+  private $rootRelativeURL;
+  private $rootRelativePath;
   
   use ContentifierAdmin;  
   
@@ -218,7 +225,7 @@ abstract class Contentifier
     "</head>".
     "<body>".
     "<h1>Contentifier Installation</h1>";
-    if ($_POST["username"] && $_POST["password"])
+    if (@$_POST["username"] && @$_POST["password"])
     {
       $isMysql = strstr($this->sqldsn(),"mysql")!==false;
       $primary = $isMysql ? "int(11) PRIMARY KEY NOT NULL AUTO_INCREMENT" : "INTEGER PRIMARY KEY AUTOINCREMENT";
@@ -245,7 +252,6 @@ abstract class Contentifier
       "<input name='username' required='yes'/>".
       "<label>Password:</label>".
       "<input name='password' required='yes' type='password'/>".
-      "<input type='hidden' name='token' value='".$this->escape($token)."'/>".
       "<input type='submit' name='createUser' value='Create'/>".
       "</form>";
     }

@@ -1,4 +1,4 @@
-<?
+<?php
 trait ContentifierAdmin
 {
   function thumbnail_cover($srcfile, $dstfile, $limitx=128, $limity=128, $outFormat=IMAGETYPE_PNG)
